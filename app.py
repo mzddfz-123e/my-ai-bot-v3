@@ -2,14 +2,12 @@ import os
 import requests
 import streamlit as st
 
-# --- إعدادات الصفحة ---
 st.set_page_config(
     page_title="المساعد الذكي الشامل",
     page_icon="🤖",
     layout="centered"
 )
 
-# --- التصميم وإشارة الصانع ---
 st.markdown("""
     <style>
     .main { direction: rtl; text-align: right; }
@@ -33,14 +31,12 @@ st.markdown('<div class="designer-tag">✨ صانعي وبكل فخر محمد �
 st.title("🤖 المساعد الذكي الشامل")
 st.caption("ذكاء اصطناعي مخصص للإجابة عن أسئلتك فوراً")
 
-# --- القائمة الجانبية ---
 with st.sidebar:
     st.header("⚙️ الخيارات")
     if st.button("مسح السجل / محادثة جديدة"):
         st.session_state.messages = []
         st.rerun()
 
-# --- جلب المفتاح تلقائياً ---
 raw_key = st.secrets.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY", "")
 api_key = str(raw_key).strip()
 
@@ -64,24 +60,26 @@ if user_input:
         try:
             with st.chat_message("assistant"):
                 with st.spinner("جاري التفكير وتوليد الإجابة..."):
-                    # طلب مباشر لـ API بدون مكتبات وسيطة لضمان العمل 100%
-                    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-8b:generateContent?key={api_key}"
-                    headers = {'Content-Type': 'json'}
-                    payload = {
-                        "contents": [{
-                            "parts": [{"text": user_input}]
-                        }]
-                    }
-                    
-                    response = requests.post(url, json=payload)
-                    res_json = response.json()
+                    # التجربة على النماذج الرسمية النشطة لعام 2026
+                    models = ["gemini-2.5-flash", "gemini-2.0-flash"]
+                    success = False
+                    answer = ""
 
-                    if "candidates" in res_json:
-                        answer = res_json["candidates"][0]["content"]["parts"][0]["text"]
+                    for m in models:
+                        url = f"https://generativelanguage.googleapis.com/v1beta/models/{m}:generateContent?key={api_key}"
+                        payload = {"contents": [{"parts": [{"text": user_input}]}]}
+                        res = requests.post(url, json=payload).json()
+
+                        if "candidates" in res:
+                            answer = res["candidates"][0]["content"]["parts"][0]["text"]
+                            success = True
+                            break
+
+                    if success:
                         st.markdown(answer)
                         st.session_state.messages.append({"role": "assistant", "content": answer})
                     else:
-                        st.error(f"خطأ من الاستجابة: {res_json.get('error', {}).get('message', res_json)}")
+                        st.error("تعذر الاتصال بالنموذج، تأكد من صحة المفتاح في Secrets.")
 
         except Exception as e:
             st.error(f"حدث خطأ أثناء الاتصال: {e}")
