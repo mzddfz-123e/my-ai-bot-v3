@@ -1,6 +1,6 @@
 import os
+import requests
 import streamlit as st
-import google.generativeai as genai
 
 # --- إعدادات الصفحة ---
 st.set_page_config(
@@ -62,17 +62,26 @@ if user_input:
             st.markdown(user_input)
 
         try:
-            # تهيئة المكتبة باستخدام النموذج الحديث
-            genai.configure(api_key=api_key)
-            model = genai.GenerativeModel("gemini-1.5-flash-8b")
-
             with st.chat_message("assistant"):
                 with st.spinner("جاري التفكير وتوليد الإجابة..."):
-                    response = model.generate_content(user_input)
-                    answer = response.text
-                    st.markdown(answer)
+                    # طلب مباشر لـ API بدون مكتبات وسيطة لضمان العمل 100%
+                    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+                    headers = {'Content-Type': 'json'}
+                    payload = {
+                        "contents": [{
+                            "parts": [{"text": user_input}]
+                        }]
+                    }
+                    
+                    response = requests.post(url, json=payload)
+                    res_json = response.json()
 
-            st.session_state.messages.append({"role": "assistant", "content": answer})
+                    if "candidates" in res_json:
+                        answer = res_json["candidates"][0]["content"]["parts"][0]["text"]
+                        st.markdown(answer)
+                        st.session_state.messages.append({"role": "assistant", "content": answer})
+                    else:
+                        st.error(f"خطأ من الاستجابة: {res_json.get('error', {}).get('message', res_json)}")
 
         except Exception as e:
-            st.error(f"حدث خطأ أثناء معالجة الطلب: {e}")
+            st.error(f"حدث خطأ أثناء الاتصال: {e}")
