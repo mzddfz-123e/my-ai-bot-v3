@@ -65,7 +65,7 @@ if user_input:
             with st.chat_message("assistant"):
                 with st.spinner("جاري التفكير وتوليد الإجابة..."):
                     # طلب مباشر لـ API بدون مكتبات وسيطة لضمان العمل 100%
-                    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+                    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-8b:generateContent?key={api_key}"
                     headers = {'Content-Type': 'json'}
                     payload = {
                         "contents": [{
