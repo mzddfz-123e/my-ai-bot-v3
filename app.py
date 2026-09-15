@@ -60,26 +60,20 @@ if user_input:
         try:
             with st.chat_message("assistant"):
                 with st.spinner("جاري التفكير وتوليد الإجابة..."):
-                    # التجربة على النماذج الرسمية النشطة لعام 2026
-                    models = ["gemini-2.5-flash", "gemini-2.0-flash"]
-                    success = False
-                    answer = ""
+                    # إرسال طلب مباشر واستخراج الاستجابة الحقيقية للخطأ
+                    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+                    payload = {"contents": [{"parts": [{"text": user_input}]}]}
+                    
+                    response = requests.post(url, json=payload)
+                    res_json = response.json()
 
-                    for m in models:
-                        url = f"https://generativelanguage.googleapis.com/v1beta/models/{m}:generateContent?key={api_key}"
-                        payload = {"contents": [{"parts": [{"text": user_input}]}]}
-                        res = requests.post(url, json=payload).json()
-
-                        if "candidates" in res:
-                            answer = res["candidates"][0]["content"]["parts"][0]["text"]
-                            success = True
-                            break
-
-                    if success:
+                    if "candidates" in res_json:
+                        answer = res_json["candidates"][0]["content"]["parts"][0]["text"]
                         st.markdown(answer)
                         st.session_state.messages.append({"role": "assistant", "content": answer})
                     else:
-                        st.error("تعذر الاتصال بالنموذج، تأكد من صحة المفتاح في Secrets.")
+                        # طباعة الخطأ القادم من Google بالتفصيل
+                        st.error(f"تفاصيل الخطأ من جوجل: {res_json}")
 
         except Exception as e:
-            st.error(f"حدث خطأ أثناء الاتصال: {e}")
+            st.error(f"حدث خطأ في النظام: {e}")
