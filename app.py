@@ -2,12 +2,14 @@ import os
 import requests
 import streamlit as st
 
+# --- إعدادات الصفحة ---
 st.set_page_config(
     page_title="المساعد الذكي الشامل",
     page_icon="🤖",
     layout="centered"
 )
 
+# --- التصميم وإشارة الصانع ---
 st.markdown("""
     <style>
     .main { direction: rtl; text-align: right; }
@@ -31,12 +33,14 @@ st.markdown('<div class="designer-tag">✨ صانعي وبكل فخر محمد �
 st.title("🤖 المساعد الذكي الشامل")
 st.caption("ذكاء اصطناعي مخصص للإجابة عن أسئلتك فوراً")
 
+# --- القائمة الجانبية ---
 with st.sidebar:
     st.header("⚙️ الخيارات")
     if st.button("مسح السجل / محادثة جديدة"):
         st.session_state.messages = []
         st.rerun()
 
+# --- جلب المفتاح ---
 raw_key = st.secrets.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY", "")
 api_key = str(raw_key).strip()
 
@@ -60,20 +64,30 @@ if user_input:
         try:
             with st.chat_message("assistant"):
                 with st.spinner("جاري التفكير وتوليد الإجابة..."):
-                    # إرسال طلب مباشر واستخراج الاستجابة الحقيقية للخطأ
-                    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
-                    payload = {"contents": [{"parts": [{"text": user_input}]}]}
-                    
-                    response = requests.post(url, json=payload)
-                    res_json = response.json()
+                    # التجربة بالترتيب على النماذج الرسمية النشطة
+                    candidates = ["gemini-2.5-flash", "gemini-2.0-flash"]
+                    success = False
+                    final_answer = ""
+                    last_error = ""
 
-                    if "candidates" in res_json:
-                        answer = res_json["candidates"][0]["content"]["parts"][0]["text"]
-                        st.markdown(answer)
-                        st.session_state.messages.append({"role": "assistant", "content": answer})
+                    for model_id in candidates:
+                        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_id}:generateContent?key={api_key}"
+                        payload = {"contents": [{"parts": [{"text": user_input}]}]}
+                        
+                        res = requests.post(url, json=payload).json()
+
+                        if "candidates" in res:
+                            final_answer = res["candidates"][0]["content"]["parts"][0]["text"]
+                            success = True
+                            break
+                        else:
+                            last_error = res
+
+                    if success:
+                        st.markdown(final_answer)
+                        st.session_state.messages.append({"role": "assistant", "content": final_answer})
                     else:
-                        # طباعة الخطأ القادم من Google بالتفصيل
-                        st.error(f"تفاصيل الخطأ من جوجل: {res_json}")
+                        st.error(f"تفاصيل الاستجابة من جوجل: {last_error}")
 
         except Exception as e:
-            st.error(f"حدث خطأ في النظام: {e}")
+            st.error(f"حدث خطأ أثناء الاتصال: {e}")
