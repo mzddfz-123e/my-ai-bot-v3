@@ -61,7 +61,7 @@ if user_input:
             with st.chat_message("assistant"):
                 with st.spinner("جاري التفكير وتوليد الإجابة..."):
                     # إرسال طلب مباشر واستخراج الاستجابة الحقيقية للخطأ
-                    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+                    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={api_key}"
                     payload = {"contents": [{"parts": [{"text": user_input}]}]}
                     
                     response = requests.post(url, json=payload)
