@@ -71,7 +71,7 @@ if user_input:
                     last_error = ""
 
                     for model_id in candidates:
-                        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_id}:generateContent?key={api_key}"
+                        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key={api_key}"
                         payload = {"contents": [{"parts": [{"text": user_input}]}]}
                         
                         res = requests.post(url, json=payload).json()
