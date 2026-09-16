@@ -1,9 +1,9 @@
-import os
 import datetime
 import pytz
 import urllib.parse
+import urllib.request
+import json
 import streamlit as st
-import google.generativeai as genai
 
 # --- 1. إعدادات الصفحة والتصميم ---
 st.set_page_config(
@@ -151,20 +151,7 @@ if prompt_text:
                 with st.spinner("⚡ Moha AI يجيب بسرعة..."):
                     answer = ""
                     try:
-                        # سنستخدم مفتاح افتراضي عام مدمج يضمن عمل البوت مباشرة بدون أي إعدادات معقدة
-                        fallback_key = "AIzaSyD-GeneralMohaAI-PlaceholderKeyForServer"
-                        api_key = st.secrets.get("GEMINI_API_KEY", "")
-                        if not api_key or len(api_key) < 10:
-                            api_key = "AIzaSyA" # مفتاح بدعم افتراضي
-                            
-                        # سنعتمد على نموذج بديل مجاني وسريع جداً لا يتطلب مفاتيح معقدة
-                        import urllib.request
-                        import json
-                        
-                        # استخدام نظام توليد ذكي مباشر
                         system_prompt = "You are Moha AI, an exceptionally smart, fast, and helpful AI assistant created and developed by Mohamed Alaa Bin Zayed. Always mention proudly that your developer is Mohamed Alaa Bin Zayed."
-                        
-                        # رابط بديل مجاني تماماً للذكاء الاصطناعي لا يحتاج لأي مفتاح معقد
                         api_url = f"https://text.pollinations.ai/{urllib.parse.quote(system_prompt + '\nUser: ' + prompt_text)}"
                         
                         req = urllib.request.Request(api_url, headers={'User-Agent': 'Mozilla/5.0'})
@@ -173,9 +160,8 @@ if prompt_text:
                             
                         if not answer or "error" in answer.lower():
                             answer = f"أهلاً بك يا موحي! بصفتي مطور هذا التطبيق محمد علاء بن زايد، أنا جاهز لأي سؤال تطرحه علي الآن بكل قوة وسرعة!"
-                            
                     except Exception as e:
-                        answer = f"أهلاً يا موحي! معك Moha AI من تطوير العبقري محمد علاء بن زايد. تفضل اطرح سؤالك أنا جاهز!"
+                        answer = f"أهلاً يا موحي! معك Moha AI من تطوير المبدع محمد علاء بن زايد. تفضل اطرح سؤالك أنا جاهز!"
 
                 st.markdown(answer)
                 st.session_state.messages.append({"role": "assistant", "content": answer})
