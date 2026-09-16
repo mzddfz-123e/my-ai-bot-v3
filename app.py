@@ -163,6 +163,14 @@ if prompt_text:
                 else:
                     with st.spinner("⚡ Moha AI يجيب بسرعة..."):
                         answer = ""
+                        # قائمة نماذج متعددة يتم تجربتها تلقائياً لتجنب أي خطأ في اسم الموديل
+                        models_to_try = [
+                            'gemini-2.5-flash',
+                            'gemini-1.5-flash',
+                            'gemini-2.0-flash-exp',
+                            'gemini-1.5-pro'
+                        ]
+                        
                         try:
                             client = genai.Client(api_key=api_key)
                             system_instruction = (
@@ -177,20 +185,26 @@ if prompt_text:
                                 contents.append(types.Part.from_bytes(data=bytes_data, mime_type=uploaded_media.type))
                             contents.append(prompt_text)
                             
-                            # استخدام النموذج القياسي المدعوم رسمياً
-                            response = client.models.generate_content(
-                                model='gemini-2.5-flash',
-                                contents=contents,
-                                config=types.GenerateContentConfig(
-                                    system_instruction=system_instruction
-                                )
-                            )
-                            if response and response.text:
-                                answer = response.text
-                            else:
-                                answer = "⚠️ لم يتم استلام رد من النموذج."
+                            for m in models_to_try:
+                                try:
+                                    response = client.models.generate_content(
+                                        model=m,
+                                        contents=contents,
+                                        config=types.GenerateContentConfig(
+                                            system_instruction=system_instruction
+                                        )
+                                    )
+                                    if response and response.text:
+                                        answer = response.text
+                                        break
+                                except Exception:
+                                    continue
+                            
+                            if not answer:
+                                answer = "⚠️ تعذر الاتصال بجميع النماذج المتاحة. تأكد من صحة المفتاح."
+                                
                         except Exception as e:
-                            answer = f"⚠️ الخطأ التقني: {str(e)}"
+                            answer = f"⚠️ خطأ عام: {str(e)}"
 
                     st.markdown(answer)
                     st.session_state.messages.append({"role": "assistant", "content": answer})
