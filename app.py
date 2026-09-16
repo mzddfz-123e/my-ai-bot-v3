@@ -1,6 +1,8 @@
 import datetime
 import pytz
 import urllib.parse
+import urllib.request
+import json
 import streamlit as st
 
 # --- 1. إعدادات الصفحة والتصميم ---
@@ -37,7 +39,7 @@ if "messages" not in st.session_state:
 if "saved_chats" not in st.session_state:
     st.session_state.saved_chats = {}
 
-# --- 2. القائمة الجانبية (نظيفة ومرتبة) ---
+# --- 2. القائمة الجانبية ---
 with st.sidebar:
     st.header("⚙️ خيارات Moha AI")
     
@@ -146,11 +148,22 @@ if prompt_text:
                 st.markdown(answer)
                 st.session_state.messages.append({"role": "assistant", "content": answer})
             else:
-                with st.spinner("⚡ Moha AI يجيب بسرعة..."):
+                with st.spinner("⚡ Moha AI يفكر و يجيب بسرعة..."):
+                    answer = ""
                     try:
-                        answer = f"أهلاً بك يا موحي! أنا بوت Moha AI الذكي، تم تطويري وبرمجتي بكل فخر بواسطة العبقري **محمد علاء بن زايد**. لقد استقبلت رسالتك ('{prompt_text}') وأنا جاهز لمساعدتك في أي شيء تريده فوراً!"
+                        # إرسال السؤال للنموذج الذكي للحصول على ردود متجددة ودقيقة
+                        system_instructions = "You are Moha AI, a smart assistant created by Mohamed Alaa Bin Zayed. Answer in Arabic gracefully."
+                        full_query = f"{system_instructions}\nUser: {prompt_text}"
+                        api_url = f"https://text.pollinations.ai/prompt/{urllib.parse.quote(full_query)}"
+                        
+                        req = urllib.request.Request(api_url, headers={'User-Agent': 'Mozilla/5.0'})
+                        with urllib.request.urlopen(req, timeout=15) as response:
+                            answer = response.read().decode('utf-8')
+                            
+                        if not answer or "error" in answer.lower():
+                            answer = f"أهلاً يا موحي! معك Moha AI من تطوير العبقري محمد علاء بن زايد. بخصوص سؤالك '{prompt_text}'، أنا جاهز لمساعدتك بكل تفصيل تريده!"
                     except Exception as e:
-                        answer = f"أهلاً يا موحي! معك Moha AI من تطوير محمد علاء بن زايد. تفضل أنا معك!"
+                        answer = f"أهلاً يا موحي! معك Moha AI من تطوير محمد علاء بن زايد. تفضل اطرح سؤالك أنا جاهز!"
 
                 st.markdown(answer)
                 st.session_state.messages.append({"role": "assistant", "content": answer})
