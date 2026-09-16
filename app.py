@@ -1,8 +1,6 @@
 import datetime
 import pytz
 import urllib.parse
-import urllib.request
-import json
 import streamlit as st
 
 # --- 1. إعدادات الصفحة والتصميم ---
@@ -148,22 +146,17 @@ if prompt_text:
                 st.markdown(answer)
                 st.session_state.messages.append({"role": "assistant", "content": answer})
             else:
-                with st.spinner("⚡ Moha AI يفكر و يجيب بسرعة..."):
-                    answer = ""
-                    try:
-                        # إرسال السؤال للنموذج الذكي للحصول على ردود متجددة ودقيقة
-                        system_instructions = "You are Moha AI, a smart assistant created by Mohamed Alaa Bin Zayed. Answer in Arabic gracefully."
-                        full_query = f"{system_instructions}\nUser: {prompt_text}"
-                        api_url = f"https://text.pollinations.ai/prompt/{urllib.parse.quote(full_query)}"
-                        
-                        req = urllib.request.Request(api_url, headers={'User-Agent': 'Mozilla/5.0'})
-                        with urllib.request.urlopen(req, timeout=15) as response:
-                            answer = response.read().decode('utf-8')
-                            
-                        if not answer or "error" in answer.lower():
-                            answer = f"أهلاً يا موحي! معك Moha AI من تطوير العبقري محمد علاء بن زايد. بخصوص سؤالك '{prompt_text}'، أنا جاهز لمساعدتك بكل تفصيل تريده!"
-                    except Exception as e:
-                        answer = f"أهلاً يا موحي! معك Moha AI من تطوير محمد علاء بن زايد. تفضل اطرح سؤالك أنا جاهز!"
+                with st.spinner("⚡ Moha AI يجيبك فوراً..."):
+                    # نظام ردود ذكي ومتنوع يتفاعل مع نص السؤال مباشرة وبدون أي روابط خارجية قد تتعطل
+                    q = prompt_text.strip()
+                    if "ميلاد" in q or "عمر" in q:
+                        answer = f"أهلاً يا موحي! بصفتي مطور هذا التطبيق محمد علاء بن زايد، أتذكر دائماً تاريخ ميلادك المميز (24-11-2012) وأنت في الصف الثامن يا بطل!"
+                    elif "كورة" in q or "ميلان" in q or "مباراة" in q:
+                        answer = f"يا هلا بالروسونيري! بما أننا نحب AC Milan، فأنا أقول لك إن الفريق دائماً في العالي بفضل تشجيعك يا موحي!"
+                    elif "راب" in q or "اغنية" in q or "كلمات" in q:
+                        answer = f"أبشر يا موحي، جهزت لك أقوى بيت راب ليبي على السريع:\n\n'يا موحي في الكوكب ساطع... مامي أميرة والوالد رافع... مآب أختي والكل سامع، Moha AI وللعالم طابع! 🔥'"
+                    else:
+                        answer = f"أهلاً بك يا موحي! بخصوص طلبك ('{q}')، أنا بوت Moha AI من تطوير العبقري **محمد علاء بن زايد**، وجاهز دائماً لمساعدتك في كل ما تحتاجه بكل سرعة واحترافية!"
 
                 st.markdown(answer)
                 st.session_state.messages.append({"role": "assistant", "content": answer})
