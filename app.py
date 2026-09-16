@@ -40,7 +40,7 @@ if "messages" not in st.session_state:
 if "saved_chats" not in st.session_state:
     st.session_state.saved_chats = {}
 
-# --- 2. القائمة الجانبية (نظيفة ومرتبة بدون زحمة) ---
+# --- 2. القائمة الجانبية (نظيفة ومرتبة) ---
 with st.sidebar:
     st.header("⚙️ خيارات Moha AI")
     
@@ -152,7 +152,6 @@ if prompt_text:
                 with st.spinner("⚡ Moha AI يجيب بسرعة..."):
                     answer = ""
                     try:
-                        # سحب المفتاح مباشرة من Secrets بأمان وبدون حقول جانبية
                         api_key = st.secrets.get("GEMINI_API_KEY", "")
                         client = genai.Client(api_key=api_key)
                         
@@ -168,8 +167,9 @@ if prompt_text:
                             contents.append(types.Part.from_bytes(data=bytes_data, mime_type=uploaded_media.type))
                         contents.append(prompt_text)
                         
+                        # استخدام النموذج الموصى به رسمياً من جوجل في رسالة الخطأ
                         response = client.models.generate_content(
-                            model='gemini-2.5-flash',
+                            model='gemini-3.6-flash',
                             contents=contents,
                             config=types.GenerateContentConfig(
                                 system_instruction=system_instruction
