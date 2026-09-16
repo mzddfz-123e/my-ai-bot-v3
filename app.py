@@ -40,14 +40,21 @@ if "messages" not in st.session_state:
 if "saved_chats" not in st.session_state:
     st.session_state.saved_chats = {}
 
-# --- 2. القائمة الجانبية وجلب المفتاح ---
+# --- 2. القائمة الجانبية وجلب المفتاح بدقة ---
 with st.sidebar:
     st.header("⚙️ خيارات Moha AI")
-    default_key = st.secrets.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY", "")
-    custom_key = st.text_input("🔑 مفتاح Gemini API (اختياري):", type="password")
-    api_key = custom_key.strip() if custom_key.strip() else str(default_key).strip().replace('"', '').replace("'", "")
     
-    enable_audio_reply = st.toggle("🔊 تفعيل الرد الصوتي", value=False)
+    # جلب المفتاح من الـ Secrets أو من خانة الإدخال اليدوية
+    secret_key = ""
+    try:
+        secret_key = st.secrets.get("GEMINI_API_KEY", "")
+    except Exception:
+        pass
+        
+    custom_key = st.text_input("🔑 مفتاح Gemini API:", type="password", value=secret_key)
+    api_key = custom_key.strip().replace('"', '').replace("'", "")
+    
+    enable_audio_reply = st.toggle("🔊 تفعيل الرد الصوتى", value=False)
     voice_gender = st.selectbox("🗣️ صوت المتحدث:", ("صوت أنثى (طبيعي وسريع)", "صوت رجل (طبيعي وسريع)"))
     
     st.write("---")
@@ -153,48 +160,49 @@ if prompt_text:
                 st.session_state.messages.append({"role": "assistant", "content": answer})
             else:
                 if not api_key:
-                    st.error("⚠️ لم يتم إدخال مفتاح API. أدخله في القائمة الجانبية أو في Secrets.")
+                    st.error("⚠️ الرجاء إدخال مفتاح Gemini API في القائمة الجانبية.")
                 else:
                     with st.spinner("⚡ Moha AI يجيب بسرعة..."):
                         answer = ""
-                        # استخدام النموذج الأكثر استقراراً وقوة في الحصة المجانية
                         models_to_try = ['gemini-1.5-flash', 'gemini-1.5-pro']
                         
-                        client = genai.Client(api_key=api_key)
-                        system_instruction = (
-                            "You are Moha AI, an exceptionally smart, fast, and helpful AI assistant created and developed by Mohamed Alaa Bin Zayed. "
-                            "When speaking or answering in English, use flawless, modern, natural, and grammatically accurate English. "
-                            "If asked who created, developed, or built you, answer clearly and proudly in any language that your developer and creator is Mohamed Alaa Bin Zayed."
-                        )
-                        
-                        contents = []
-                        if uploaded_media:
-                            bytes_data = uploaded_media.getvalue()
-                            contents.append(types.Part.from_bytes(data=bytes_data, mime_type=uploaded_media.type))
-                        contents.append(prompt_text)
-                        
-                        for target_model in models_to_try:
-                            try:
-                                response = client.models.generate_content(
-                                    model=target_model,
-                                    contents=contents,
-                                    config=types.GenerateContentConfig(
-                                        system_instruction=system_instruction
+                        try:
+                            client = genai.Client(api_key=api_key)
+                            system_instruction = (
+                                "You are Moha AI, an exceptionally smart, fast, and helpful AI assistant created and developed by Mohamed Alaa Bin Zayed. "
+                                "When speaking or answering in English, use flawless, modern, natural, and grammatically accurate English. "
+                                "If asked who created, developed, or built you, answer clearly and proudly in any language that your developer and creator is Mohamed Alaa Bin Zayed."
+                            )
+                            
+                            contents = []
+                            if uploaded_media:
+                                bytes_data = uploaded_media.getvalue()
+                                contents.append(types.Part.from_bytes(data=bytes_data, mime_type=uploaded_media.type))
+                            contents.append(prompt_text)
+                            
+                            for target_model in models_to_try:
+                                try:
+                                    response = client.models.generate_content(
+                                        model=target_model,
+                                        contents=contents,
+                                        config=types.GenerateContentConfig(
+                                            system_instruction=system_instruction
+                                        )
                                     )
-                                )
-                                if response and response.text:
-                                    answer = response.text
-                                    break
-                            except Exception as e:
-                                continue
-
-                        if not answer:
-                            answer = "⚠️ حدث خطأ في الاتصال بالنموذج. تأكد من صحة مفتاح API."
+                                    if response and response.text:
+                                        answer = response.text
+                                        break
+                                except Exception as model_err:
+                                    # احتفظ بالخطأ الحقيقي لنعرف سببه لو حدث مجدداً
+                                    answer = f"⚠️ تفاصيل الخطأ التقني: {str(model_err)}"
+                                    continue
+                        except Exception as client_err:
+                            answer = f"⚠️ خطأ في تهيئة العميل: {str(client_err)}"
 
                     st.markdown(answer)
                     st.session_state.messages.append({"role": "assistant", "content": answer})
 
-                    if enable_audio_reply and answer:
+                    if enable_audio_reply and answer and not answer.startswith("⚠️"):
                         pitch_val = "0.85" if "رجل" in voice_gender else "1.05"
                         clean_text = answer.replace("'", "").replace("\n", " ").replace("*", "").replace('"', '')
                         tts_script = f"""
