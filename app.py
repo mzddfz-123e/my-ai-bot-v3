@@ -40,9 +40,19 @@ if "messages" not in st.session_state:
 if "saved_chats" not in st.session_state:
     st.session_state.saved_chats = {}
 
-# --- 2. القائمة الجانبية (نظيفة ومرتبة) ---
+# --- 2. القائمة الجانبية (مع خانة مفتاح مرنة لضمان عدم توقف التطبيق أبداً) ---
 with st.sidebar:
     st.header("⚙️ خيارات Moha AI")
+    
+    # جلب المفتاح من الـ Secrets كخيار أول، أو الإدخال اليدوي الفوري لو حدث ضغط
+    secret_key = ""
+    try:
+        secret_key = st.secrets.get("GEMINI_API_KEY", "")
+    except Exception:
+        pass
+        
+    custom_key = st.text_input("🔑 مفتاح Gemini API:", type="password", value=secret_key, placeholder="الصق مفتاحك هنا عند الحاجة")
+    api_key = custom_key.strip().replace('"', '').replace("'", "")
     
     enable_audio_reply = st.toggle("🔊 تفعيل الرد الصوتي", value=False)
     voice_gender = st.selectbox("🗣️ صوت المتحدث:", ("صوت أنثى (طبيعي وسريع)", "صوت رجل (طبيعي وسريع)"))
@@ -149,53 +159,55 @@ if prompt_text:
                 st.markdown(answer)
                 st.session_state.messages.append({"role": "assistant", "content": answer})
             else:
-                with st.spinner("⚡ Moha AI يجيب بسرعة..."):
-                    answer = ""
-                    try:
-                        api_key = st.secrets.get("GEMINI_API_KEY", "")
-                        client = genai.Client(api_key=api_key)
-                        
-                        system_instruction = (
-                            "You are Moha AI, an exceptionally smart, fast, and helpful AI assistant created and developed by Mohamed Alaa Bin Zayed. "
-                            "When speaking or answering in English, use flawless, modern, natural, and grammatically accurate English. "
-                            "If asked who created, developed, or built you, answer clearly and proudly in any language that your developer and creator is Mohamed Alaa Bin Zayed."
-                        )
-                        
-                        contents = []
-                        if uploaded_media:
-                            bytes_data = uploaded_media.getvalue()
-                            contents.append(types.Part.from_bytes(data=bytes_data, mime_type=uploaded_media.type))
-                        contents.append(prompt_text)
-                        
-                        # استخدام النموذج الموصى به رسمياً من جوجل في رسالة الخطأ
-                        response = client.models.generate_content(
-                            model='gemini-3.6-flash',
-                            contents=contents,
-                            config=types.GenerateContentConfig(
-                                system_instruction=system_instruction
+                if not api_key:
+                    st.error("⚠️ يرجى إدخال مفتاح Gemini API في القائمة الجانبية.")
+                else:
+                    with st.spinner("⚡ Moha AI يجيب بسرعة..."):
+                        answer = ""
+                        try:
+                            client = genai.Client(api_key=api_key)
+                            
+                            system_instruction = (
+                                "You are Moha AI, an exceptionally smart, fast, and helpful AI assistant created and developed by Mohamed Alaa Bin Zayed. "
+                                "When speaking or answering in English, use flawless, modern, natural, and grammatically accurate English. "
+                                "If asked who created, developed, or built you, answer clearly and proudly in any language that your developer and creator is Mohamed Alaa Bin Zayed."
                             )
-                        )
-                        if response and response.text:
-                            answer = response.text
-                        else:
-                            answer = "⚠️ لم يتم استلام رد من النموذج."
-                    except Exception as e:
-                        answer = f"⚠️ خطأ في الاتصال: {str(e)}"
+                            
+                            contents = []
+                            if uploaded_media:
+                                bytes_data = uploaded_media.getvalue()
+                                contents.append(types.Part.from_bytes(data=bytes_data, mime_type=uploaded_media.type))
+                            contents.append(prompt_text)
+                            
+                            # استخدام نموذج gemini-3.6-flash الذي أكدته جوجل
+                            response = client.models.generate_content(
+                                model='gemini-3.6-flash',
+                                contents=contents,
+                                config=types.GenerateContentConfig(
+                                    system_instruction=system_instruction
+                                )
+                            )
+                            if response and response.text:
+                                answer = response.text
+                            else:
+                                answer = "⚠️ لم يتم استلام رد من النموذج."
+                        except Exception as e:
+                            answer = f"⚠️ خطأ تقني: {str(e)}"
 
-                st.markdown(answer)
-                st.session_state.messages.append({"role": "assistant", "content": answer})
+                    st.markdown(answer)
+                    st.session_state.messages.append({"role": "assistant", "content": answer})
 
-                if enable_audio_reply and answer and not answer.startswith("⚠️"):
-                    pitch_val = "0.85" if "رجل" in voice_gender else "1.05"
-                    clean_text = answer.replace("'", "").replace("\n", " ").replace("*", "").replace('"', '')
-                    tts_script = f"""
-                    <script>
-                    window.speechSynthesis.cancel();
-                    var msg = new SpeechSynthesisUtterance("{clean_text}");
-                    msg.lang = 'ar-SA';
-                    msg.rate = 1.25;
-                    msg.pitch = {pitch_val};
-                    window.speechSynthesis.speak(msg);
-                    </script>
-                    """
-                    st.components.v1.html(tts_script, height=0)
+                    if enable_audio_reply and answer and not answer.startswith("⚠️"):
+                        pitch_val = "0.85" if "رجل" in voice_gender else "1.05"
+                        clean_text = answer.replace("'", "").replace("\n", " ").replace("*", "").replace('"', '')
+                        tts_script = f"""
+                        <script>
+                        window.speechSynthesis.cancel();
+                        var msg = new SpeechSynthesisUtterance("{clean_text}");
+                        msg.lang = 'ar-SA';
+                        msg.rate = 1.25;
+                        msg.pitch = {pitch_val};
+                        window.speechSynthesis.speak(msg);
+                        </script>
+                        """
+                        st.components.v1.html(tts_script, height=0)
