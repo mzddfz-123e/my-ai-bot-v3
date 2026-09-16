@@ -173,33 +173,44 @@ if prompt_text:
                     st.error("⚠️ لم يتم العثور على مفتاح API في Secrets.")
                 else:
                     with st.spinner("⚡ Moha AI يجيب بسرعة..."):
-                        try:
-                            client = genai.Client(api_key=api_key)
-                            
-                            system_instruction = (
-                                "You are Moha AI, an exceptionally smart, fast, and helpful AI assistant created and developed by Mohamed Alaa Bin Zayed. "
-                                "When speaking or answering in English, use flawless, modern, natural, and grammatically accurate English. "
-                                "If asked who created, developed, or built you, answer clearly and proudly in any language that your developer and creator is Mohamed Alaa Bin Zayed."
-                            )
-                            
-                            contents = []
-                            if uploaded_media:
-                                bytes_data = uploaded_media.getvalue()
-                                contents.append(types.Part.from_bytes(data=bytes_data, mime_type=uploaded_media.type))
-                            
-                            contents.append(prompt_text)
-                            
-                            # استخدام الاسم الصحيح والمطلوب من السيرفر
-                            response = client.models.generate_content(
-                                model='gemini-3.6-flash',
-                                contents=contents,
-                                config=types.GenerateContentConfig(
-                                    system_instruction=system_instruction
+                        answer = ""
+                        # التنقل التلقائي بين عدة نماذج لتفادي نفاد الكوتا (Quota Exceeded)
+                        models_to_try = [
+                            'gemini-3.6-flash',
+                            'gemini-2.5-flash',
+                            'gemini-2.0-flash'
+                        ]
+                        
+                        client = genai.Client(api_key=api_key)
+                        system_instruction = (
+                            "You are Moha AI, an exceptionally smart, fast, and helpful AI assistant created and developed by Mohamed Alaa Bin Zayed. "
+                            "When speaking or answering in English, use flawless, modern, natural, and grammatically accurate English. "
+                            "If asked who created, developed, or built you, answer clearly and proudly in any language that your developer and creator is Mohamed Alaa Bin Zayed."
+                        )
+                        
+                        contents = []
+                        if uploaded_media:
+                            bytes_data = uploaded_media.getvalue()
+                            contents.append(types.Part.from_bytes(data=bytes_data, mime_type=uploaded_media.type))
+                        contents.append(prompt_text)
+                        
+                        for target_model in models_to_try:
+                            try:
+                                response = client.models.generate_content(
+                                    model=target_model,
+                                    contents=contents,
+                                    config=types.GenerateContentConfig(
+                                        system_instruction=system_instruction
+                                    )
                                 )
-                            )
-                            answer = response.text
-                        except Exception as err:
-                            answer = f"⚠️ حدث خطأ أثناء الاتصال: {str(err)}"
+                                if response and response.text:
+                                    answer = response.text
+                                    break
+                            except Exception:
+                                continue
+
+                        if not answer:
+                            answer = "⚠️ نفذت حصة الحساب اليومية أو أن المفتاح يحتاج لتحديد. يرجى تجربة مفتاح API جديد من Google AI Studio."
 
                     st.markdown(answer)
                     st.session_state.messages.append({"role": "assistant", "content": answer})
