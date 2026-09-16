@@ -6,7 +6,7 @@ import base64
 import urllib.parse
 import streamlit as st
 
-# --- 1. إعدادات الصفحة والتصميم ---
+# --- 1. إعدادات الصفحة والتصميم (بنفسجي وأبيض) ---
 st.set_page_config(
     page_title="Moha AI | محمد علاء بن زايد",
     page_icon="🔮",
@@ -82,7 +82,7 @@ def get_global_time(query):
         return f"🕒 الوقت الحالي: **{now.strftime('%I:%M:%S %p')}**"
     return None
 
-# --- 4. القائمة الجانبية ---
+# --- 4. القائمة الجانبية (حفظ المحادثات والخيارات) ---
 with st.sidebar:
     st.header("⚙️ خيارات Moha AI")
     enable_audio_reply = st.toggle("🔊 تفعيل الرد الصوتي", value=False)
@@ -177,6 +177,7 @@ if prompt_text:
                 else:
                     with st.spinner("⚡ Moha AI يجيب بسرعة..."):
                         try:
+                            # تحديث الرابط لاستخدام نموذج gemini-3.6-flash المستقر والجديد
                             url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key={api_key}"
                             parts = [{"text": prompt_text}]
                             if file_part:
@@ -193,7 +194,6 @@ if prompt_text:
                                 "contents": [{"parts": parts}]
                             }
                             
-                            # زيادة المهلة إلى 15 ثانية لتجنب انقطاع الخدمة
                             response = requests.post(url, json=payload, timeout=15)
                             res_json = response.json()
 
