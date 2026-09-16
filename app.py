@@ -1,10 +1,11 @@
 import os
-import requests
 import datetime
 import pytz
 import base64
 import urllib.parse
 import streamlit as st
+from google import genai
+from google.genai import types
 
 # --- 1. إعدادات الصفحة والتصميم ---
 st.set_page_config(
@@ -50,7 +51,7 @@ st.markdown("""
 
 st.markdown('<div class="designer-card">🔮 Moha AI | صانعي وبكل فخر محمد علاء بن زايد 🔮</div>', unsafe_allow_html=True)
 
-# --- 2. جلب وتنظيف مفتاح API ---
+# --- 2. جلب مفتاح API تلقائياً ---
 raw_key = st.secrets.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY", "")
 api_key = str(raw_key).strip().replace('"', '').replace("'", "")
 
@@ -133,15 +134,11 @@ for msg in st.session_state.messages:
 text_input = st.chat_input("اكتب سؤالك، اطلب تصميم صورة، أو تأليف أغنية...")
 
 prompt_text = ""
-file_part = None
-
 if text_input:
     prompt_text = text_input
 
 if uploaded_media and not text_input:
     prompt_text = "حلل هذا الملف المرفق باختصار وسرعة."
-    file_b64 = base64.b64encode(uploaded_media.getvalue()).decode('utf-8')
-    file_part = {"inline_data": {"mime_type": uploaded_media.type, "data": file_b64}}
 
 if prompt_text:
     st.session_state.messages.append({"role": "user", "content": prompt_text})
@@ -151,7 +148,7 @@ if prompt_text:
     is_image_request = any(w in prompt_text.lower() for w in ["صورة", "صمم", "رسم", "ارسم", "انشئ صورة", "image", "draw", "generate image", "picture"])
 
     with st.chat_message("assistant"):
-        if is_image_request and not file_part:
+        if is_image_request and not uploaded_media:
             with st.spinner("🎨 Moha AI يقوم بتصميم الصورة..."):
                 prompt_encoded = urllib.parse.quote(f"futuristic purple and white logo emblem for Moha AI, high tech glowing neon purple, pure white background, 3d render 8k, minimalist aesthetic, {prompt_text}")
                 generated_img_url = f"https://image.pollinations.ai/prompt/{prompt_encoded}?width=800&height=800&nologo=true"
@@ -167,53 +164,41 @@ if prompt_text:
                 })
         else:
             time_res = get_global_time(prompt_text)
-            if time_res and not file_part:
+            if time_res and not uploaded_media:
                 answer = time_res
                 st.markdown(answer)
                 st.session_state.messages.append({"role": "assistant", "content": answer})
             else:
                 if not api_key:
-                    st.error("⚠️ لم يتم العثور على مفتاح API في Secrets. يرجى إضافته باسم GEMINI_API_KEY.")
+                    st.error("⚠️ لم يتم العثور على مفتاح API في Secrets.")
                 else:
                     with st.spinner("⚡ Moha AI يجيب بسرعة..."):
-                        answer = ""
-                        # استخدام أسماء النماذج المعتمدة والرسمية
-                        models_to_try = ["gemini-2.5-flash", "gemini-2.0-flash"]
-                        
-                        system_instruction_text = (
-                            "You are Moha AI, an exceptionally smart, fast, and helpful AI assistant created and developed by Mohamed Alaa Bin Zayed. "
-                            "When speaking or answering in English, use flawless, modern, natural, and grammatically accurate English. "
-                            "If asked who created, developed, or built you, answer clearly and proudly in any language that your developer and creator is Mohamed Alaa Bin Zayed."
-                        )
-
-                        parts = [{"text": prompt_text}]
-                        if file_part:
-                            parts.append(file_part)
-
-                        payload = {
-                            "systemInstruction": {"parts": [{"text": system_instruction_text}]},
-                            "contents": [{"parts": parts}]
-                        }
-
-                        for model_name in models_to_try:
-                            try:
-                                url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
-                                response = requests.post(url, json=payload, timeout=12)
-                                res_json = response.json()
-
-                                if "candidates" in res_json and len(res_json["candidates"]) > 0:
-                                    answer = res_json["candidates"][0]["content"]["parts"][0]["text"]
-                                    break
-                                elif "error" in res_json:
-                                    err_msg = res_json["error"].get("message", "")
-                                    if "API key not valid" in err_msg:
-                                        answer = "⚠️ مفتاح الـ API غير صحيح. انسخ مفتاح جديد من Google AI Studio وضعه في Secrets."
-                                        break
-                            except Exception:
-                                continue
-
-                        if not answer:
-                            answer = "حدث خطأ في الاتصال بالسيرفر، تأكد من تجديد مفتاح الـ API وإعادة المحاولة."
+                        try:
+                            client = genai.Client(api_key=api_key)
+                            
+                            system_instruction = (
+                                "You are Moha AI, an exceptionally smart, fast, and helpful AI assistant created and developed by Mohamed Alaa Bin Zayed. "
+                                "When speaking or answering in English, use flawless, modern, natural, and grammatically accurate English. "
+                                "If asked who created, developed, or built you, answer clearly and proudly in any language that your developer and creator is Mohamed Alaa Bin Zayed."
+                            )
+                            
+                            contents = []
+                            if uploaded_media:
+                                bytes_data = uploaded_media.getvalue()
+                                contents.append(types.Part.from_bytes(data=bytes_data, mime_type=uploaded_media.type))
+                            
+                            contents.append(prompt_text)
+                            
+                            response = client.models.generate_content(
+                                model='gemini-2.5-flash',
+                                contents=contents,
+                                config=types.GenerateContentConfig(
+                                    system_instruction=system_instruction
+                                )
+                            )
+                            answer = response.text
+                        except Exception as err:
+                            answer = f"⚠️ حدث خطأ أثناء الاتصال: {str(err)}"
 
                     st.markdown(answer)
                     st.session_state.messages.append({"role": "assistant", "content": answer})
