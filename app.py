@@ -177,7 +177,7 @@ if prompt_text:
                 else:
                     with st.spinner("⚡ Moha AI يجيب بسرعة..."):
                         try:
-                            # تحديث الرابط لاستخدام نموذج gemini-3.6-flash المستقر والجديد
+                            # استخدام النموذج الحديث والمستقر gemini-3.6-flash
                             url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key={api_key}"
                             parts = [{"text": prompt_text}]
                             if file_part:
