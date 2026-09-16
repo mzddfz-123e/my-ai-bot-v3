@@ -5,14 +5,13 @@ import pytz
 import base64
 import streamlit as st
 
-# --- 1. إعدادات الصفحة والتصميم (Moha AI) ---
+# --- 1. إعدادات الصفحة والتصميم ---
 st.set_page_config(
     page_title="Moha AI | محمد علاء بن زايد",
     page_icon="🔮",
     layout="centered"
 )
 
-# تصميم بنفسجي وأبيض أنيق وخفيف لسرعة التحميل
 st.markdown("""
     <style>
     .main { direction: rtl; text-align: right; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
@@ -40,25 +39,27 @@ st.markdown("""
         border-radius: 12px;
         background: linear-gradient(90deg, #7b2cbf, #5a189a);
         color: white;
-        font-size: 16px;
+        font-size: 15px;
         font-weight: bold;
         border: none;
-        padding: 10px;
+        padding: 8px;
     }
     </style>
 """, unsafe_allow_html=True)
 
 st.markdown('<div class="designer-card">🔮 Moha AI | صانعي وبكل فخر محمد علاء بن زايد 🔮</div>', unsafe_allow_html=True)
-st.caption("إجابات فائقة السرعة، كتابة أغاني، تصميم صور، وقراءة صوتية عند الطلب.")
 
-# --- 2. إدارة مفتاح API والسجل ---
+# --- 2. إدارة السجل والمحفوظات ومفتاح API ---
 raw_key = st.secrets.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY", "")
 api_key = str(raw_key).strip()
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# --- 3. أداة أوقات العالم السريعة ---
+if "saved_chats" not in st.session_state:
+    st.session_state.saved_chats = {}
+
+# --- 3. أداة الوقت السريع ---
 def get_global_time(query):
     query_lower = query.lower()
     timezones = {
@@ -80,28 +81,53 @@ def get_global_time(query):
         return f"🕒 الوقت الحالي: **{now.strftime('%I:%M:%S %p')}**"
     return None
 
-# --- 4. القائمة الجانبية ---
+# --- 4. القائمة الجانبية (حفظ المحادثات والخيارات) ---
 with st.sidebar:
     st.header("⚙️ خيارات Moha AI")
-    # تم إلغاء تفعيل الرد الصوتي تلقائياً هنا (value=False)
     enable_audio_reply = st.toggle("🔊 تفعيل الرد الصوتي", value=False)
-    
     voice_gender = st.selectbox("🗣️ صوت المتحدث:", ("صوت أنثى (طبيعي وسريع)", "صوت رجل (طبيعي وسريع)"))
     
     st.write("---")
+    st.header("💾 حفظ المحادثة")
+    chat_title_input = st.text_input("اسم المحادثة:", placeholder="مثال: محادثة الراب / أفكار صور")
+    if st.button("💾 حفظ المحادثة الحالية"):
+        if st.session_state.messages:
+            title = chat_title_input.strip() if chat_title_input.strip() else f"محادثة {datetime.datetime.now().strftime('%H:%M - %d/%m')}"
+            st.session_state.saved_chats[title] = list(st.session_state.messages)
+            st.success(f"تم حفظ: {title}")
+        else:
+            st.warning("المحادثة فارغة لحفظها!")
+
+    st.write("---")
+    st.header("📂 محادثاتي المحفوظة")
+    if st.session_state.saved_chats:
+        selected_chat = st.selectbox("اختر محادثة لاسترجاعها:", list(st.session_state.saved_chats.keys()))
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("📖 فتح"):
+                st.session_state.messages = list(st.session_state.saved_chats[selected_chat])
+                st.rerun()
+        with col2:
+            if st.button("❌ حذف"):
+                del st.session_state.saved_chats[selected_chat]
+                st.rerun()
+    else:
+        st.info("لا توجد محادثات محفوظة بعد.")
+
+    st.write("---")
     uploaded_media = st.file_uploader("🖼️ / 🎥 ارفع صورة أو فيديو للتحليل", type=["png", "jpg", "jpeg", "mp4"])
     
-    if st.button("🗑️ مسح المحادثة"):
+    if st.button("🗑️ بدء محادثة جديدة"):
         st.session_state.messages = []
         st.rerun()
 
-# --- 5. عرض المحادثات ---
+# --- 5. عرض المحادثات الحالية ---
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
 
 # --- 6. استقبال وتوليد الطلبات ---
-text_input = st.chat_input("اكتب سؤالك، اطلب أغنية، أو صمم صورة...")
+text_input = st.chat_input("اكتب سؤالك، اطلب أغنية، صمم صورة، أو تحدث بالإنجليزية...")
 
 prompt_text = ""
 file_part = None
@@ -139,13 +165,17 @@ if prompt_text:
                         if file_part:
                             parts.append(file_part)
 
+                        system_instruction_text = (
+                            "You are Moha AI, an exceptionally smart, fast, and helpful AI assistant created and developed by Mohamed Alaa Bin Zayed. "
+                            "When speaking or answering in English, use flawless, modern, natural, and grammatically accurate English. "
+                            "If asked to write songs or rap lyrics, create highly creative lyrics. "
+                            "If asked to generate or design images, provide rich, highly detailed prompts in both English and Arabic. "
+                            "If asked who created, developed, or built you, answer clearly and proudly in any language that your developer and creator is Mohamed Alaa Bin Zayed."
+                        )
+
                         payload = {
                             "systemInstruction": {
-                                "parts": [
-                                    {
-                                        "text": "أنت Moha AI، مساعد ذكي، مبدع وفائق السرعة. إذا طلب منك المستخدم تأليف أغنية أو كلمات راب، قم بتأليفها فوراً بأسلوب مبدع. إذا طلب منك تصميم صورة، أعطه وصفاً دقيقاً ومفصلاً باللغة الإنجليزية والعربية يمكن استخدامه في برامج مولدات الصور. وإذا تم سؤالك عن من صنعك أو طورك، أجب دائماً وبكل فخر أن صانعك ومطورك هو محمد علاء بن زايد."
-                                    }
-                                ]
+                                "parts": [{"text": system_instruction_text}]
                             },
                             "contents": [{"parts": parts}]
                         }
@@ -164,7 +194,6 @@ if prompt_text:
                 st.markdown(answer)
                 st.session_state.messages.append({"role": "assistant", "content": answer})
 
-                # تشغيل الصوت فقط إذا قام المستخدم بتفعيله يدويًا
                 if enable_audio_reply and answer:
                     pitch_val = "0.85" if "رجل" in voice_gender else "1.05"
                     clean_text = answer.replace("'", "").replace("\n", " ").replace("*", "").replace('"', '')
