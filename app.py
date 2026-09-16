@@ -151,17 +151,20 @@ if prompt_text:
                 with st.spinner("⚡ Moha AI يجيب بسرعة..."):
                     answer = ""
                     try:
-                        system_prompt = "You are Moha AI, an exceptionally smart, fast, and helpful AI assistant created and developed by Mohamed Alaa Bin Zayed. Always mention proudly that your developer is Mohamed Alaa Bin Zayed."
-                        api_url = f"https://text.pollinations.ai/{urllib.parse.quote(system_prompt + '\nUser: ' + prompt_text)}"
+                        # نظام ذكي مباشر لا يحتاج لمفاتيح معقدة
+                        system_prompt = "You are Moha AI, an exceptionally smart, fast, and helpful AI assistant created and developed by Mohamed Alaa Bin Zayed. Always state proudly that your creator and developer is Mohamed Alaa Bin Zayed."
+                        
+                        # رابط بديل حر ومستقر
+                        api_url = f"https://text.pollinations.ai/prompt/{urllib.parse.quote(system_prompt + '\nUser: ' + prompt_text)}"
                         
                         req = urllib.request.Request(api_url, headers={'User-Agent': 'Mozilla/5.0'})
                         with urllib.request.urlopen(req, timeout=15) as response:
                             answer = response.read().decode('utf-8')
                             
                         if not answer or "error" in answer.lower():
-                            answer = f"أهلاً بك يا موحي! بصفتي مطور هذا التطبيق محمد علاء بن زايد، أنا جاهز لأي سؤال تطرحه علي الآن بكل قوة وسرعة!"
+                            answer = f"أهلاً بك يا موحي! أنا بوت Moha AI من تطوير العبقري محمد علاء بن زايد. تفضل اطرح سؤالك أنا جاهز لك دائماً!"
                     except Exception as e:
-                        answer = f"أهلاً يا موحي! معك Moha AI من تطوير المبدع محمد علاء بن زايد. تفضل اطرح سؤالك أنا جاهز!"
+                        answer = f"أهلاً يا موحي! معك Moha AI من تطوير المبدع محمد علاء بن زايد. كيف يمكنني مساعدتك اليوم؟"
 
                 st.markdown(answer)
                 st.session_state.messages.append({"role": "assistant", "content": answer})
