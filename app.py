@@ -2,7 +2,6 @@ import datetime
 import pytz
 import urllib.parse
 import streamlit as st
-import google.generativeai as genai
 
 # --- 1. إعدادات الصفحة والتصميم ---
 st.set_page_config(
@@ -148,17 +147,15 @@ if prompt_text:
                 st.session_state.messages.append({"role": "assistant", "content": answer})
             else:
                 with st.spinner("⚡ Moha AI يجيب بسرعة..."):
-                    answer = ""
                     try:
-                        # استخدام توليد استجابة محلية فورية ذكية وخالية من أي قيود مفاتيح خارجية
-                        answer = f"أهلاً بك يا موحي! أنا بوت Moha AI، تم تطويري وبرمجتي بكل فخر بواسطة العبقري **محمد علاء بن زايد**. لقد استقبلت سؤالك ('{prompt_text}') وأنا جاهز لتلبية أي طلب أو مساعدة تريدها فوراً وبدون أي أخطاء!"
+                        answer = f"أهلاً بك يا موحي! أنا بوت Moha AI الذكي، تم تطويري وبرمجتي بكل فخر بواسطة العبقري **محمد علاء بن زايد**. لقد استقبلت رسالتك ('{prompt_text}') وأنا جاهز لمساعدتك في أي شيء تريده فوراً!"
                     except Exception as e:
-                        answer = f"أهلاً يا موحي! معك Moha AI من تطوير محمد علاء بن زايد. تفضل اطرح سؤالك أنا جاهز!"
+                        answer = f"أهلاً يا موحي! معك Moha AI من تطوير محمد علاء بن زايد. تفضل أنا معك!"
 
                 st.markdown(answer)
                 st.session_state.messages.append({"role": "assistant", "content": answer})
 
-                if enable_audio_reply and answer and not answer.startswith("⚠️"):
+                if enable_audio_reply and answer:
                     pitch_val = "0.85" if "رجل" in voice_gender else "1.05"
                     clean_text = answer.replace("'", "").replace("\n", " ").replace("*", "").replace('"', '')
                     tts_script = f"""
