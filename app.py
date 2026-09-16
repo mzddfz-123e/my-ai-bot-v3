@@ -40,9 +40,12 @@ if "messages" not in st.session_state:
 if "saved_chats" not in st.session_state:
     st.session_state.saved_chats = {}
 
-# --- 2. القائمة الجانبية (نظيفة وخالية من خانة المفتاح) ---
+# --- 2. القائمة الجانبية مع خانة المفتاح المرنة ---
 with st.sidebar:
     st.header("⚙️ خيارات Moha AI")
+    
+    # خانة إدخال المفتاح مباشرة بكل سهولة
+    user_api_key = st.text_input("🔑 مفتاح Gemini API:", type="password", placeholder="أدخل مفتاحك هنا...")
     
     enable_audio_reply = st.toggle("🔊 تفعيل الرد الصوتي", value=False)
     voice_gender = st.selectbox("🗣️ صوت المتحدث:", ("صوت أنثى (طبيعي وسريع)", "صوت رجل (طبيعي وسريع)"))
@@ -151,10 +154,11 @@ if prompt_text:
             else:
                 with st.spinner("⚡ Moha AI يجيب بسرعة..."):
                     answer = ""
-                    api_key = st.secrets.get("GEMINI_API_KEY", "")
+                    # استخدام المفتاح من الشريط الجانبي أولاً، أو الاحتياطي من الـ Secrets
+                    api_key = user_api_key.strip() if user_api_key else st.secrets.get("GEMINI_API_KEY", "")
                     
                     if not api_key:
-                        answer = "⚠️ تنبيه: يرجى التأكد من إضافة مفتاح Gemini API في إعدادات الأمان (Secrets) في لوحة تحكم Streamlit."
+                        answer = "⚠️ تنبيه: يرجى إدخال مفتاح Gemini API في القائمة الجانبية (يبدأ بـ AIzaSy)."
                     else:
                         try:
                             client = genai.Client(api_key=api_key)
@@ -170,7 +174,6 @@ if prompt_text:
                                 contents.append(types.Part.from_bytes(data=bytes_data, mime_type=uploaded_media.type))
                             contents.append(prompt_text)
                             
-                            # نظام تجربة موديلات متعددة تلقائياً لضمان الجواب المضمون
                             models_to_try = ['gemini-3.6-flash', 'gemini-2.5-flash']
                             success = False
                             
@@ -191,7 +194,7 @@ if prompt_text:
                                     continue
                             
                             if not success:
-                                answer = "⚠️ حدث ضغط مؤقت في الخوادم، يرجى المحاولة بعد لحظات أو استخدام مفتاح جديد في الـ Secrets."
+                                answer = "⚠️ انتهت حصة الطلبات المجانية لهذا المفتاح أو حدث خطأ، يرجى استخدام مفتاح API جديد يبدأ بـ AIzaSy."
                                 
                         except Exception as e:
                             answer = f"⚠️ خطأ تقني: {str(e)}"
