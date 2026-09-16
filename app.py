@@ -51,41 +51,22 @@ st.markdown("""
 
 st.markdown('<div class="designer-card">🔮 Moha AI | صانعي وبكل فخر محمد علاء بن زايد 🔮</div>', unsafe_allow_html=True)
 
-# --- 2. جلب مفتاح API تلقائياً ---
-raw_key = st.secrets.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY", "")
-api_key = str(raw_key).strip().replace('"', '').replace("'", "")
-
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
 if "saved_chats" not in st.session_state:
     st.session_state.saved_chats = {}
 
-# --- 3. أداة الوقت السريع ---
-def get_global_time(query):
-    query_lower = query.lower()
-    timezones = {
-        "ليبيا": "Africa/Tripoli", "طرابلس": "Africa/Tripoli", "بنغازي": "Africa/Tripoli",
-        "مصر": "Africa/Cairo", "القاهرة": "Africa/Cairo",
-        "السعودية": "Asia/Riyadh", "الرياض": "Asia/Riyadh", "مكة": "Asia/Riyadh",
-        "الإمارات": "Asia/Dubai", "دبي": "Asia/Dubai", "قطر": "Asia/Qatar", "الكويت": "Asia/Kuwait",
-        "تونس": "Africa/Tunis", "الجزائر": "Africa/Algiers", "المغرب": "Africa/Casablanca",
-        "تركيا": "Europe/Istanbul", "بريطانيا": "Europe/London", "فرنسا": "Europe/Paris", "أمريكا": "America/New_York"
-    }
-    for country, zone in timezones.items():
-        if country in query_lower:
-            tz = pytz.timezone(zone)
-            now = datetime.datetime.now(tz)
-            return f"🕒 الوقت الآن في **{country}**: **{now.strftime('%I:%M:%S %p')}**"
-    if "الوقت" in query_lower or "الساعة" in query_lower:
-        tz = pytz.timezone("Africa/Tripoli")
-        now = datetime.datetime.now(tz)
-        return f"🕒 الوقت الحالي: **{now.strftime('%I:%M:%S %p')}**"
-    return None
-
-# --- 4. القائمة الجانبية ---
+# --- 2. القائمة الجانبية وجلب المفتاح ---
 with st.sidebar:
     st.header("⚙️ خيارات Moha AI")
+    
+    # اختيار مصدر المفتاح
+    default_key = st.secrets.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY", "")
+    custom_key = st.text_input("🔑 مفتاح Gemini API (اختياري):", type="password", help="ضع مفتاح جديد هنا إذا انتهت حصة المفتاح الرئيسي")
+    
+    api_key = custom_key.strip() if custom_key.strip() else str(default_key).strip().replace('"', '').replace("'", "")
+    
     enable_audio_reply = st.toggle("🔊 تفعيل الرد الصوتي", value=False)
     voice_gender = st.selectbox("🗣️ صوت المتحدث:", ("صوت أنثى (طبيعي وسريع)", "صوت رجل (طبيعي وسريع)"))
     
@@ -123,14 +104,36 @@ with st.sidebar:
         st.session_state.messages = []
         st.rerun()
 
-# --- 5. عرض المحادثات الحالية ---
+# --- 3. أداة الوقت السريع ---
+def get_global_time(query):
+    query_lower = query.lower()
+    timezones = {
+        "ليبيا": "Africa/Tripoli", "طرابلس": "Africa/Tripoli", "بنغازي": "Africa/Tripoli",
+        "مصر": "Africa/Cairo", "القاهرة": "Africa/Cairo",
+        "السعودية": "Asia/Riyadh", "الرياض": "Asia/Riyadh", "مكة": "Asia/Riyadh",
+        "الإمارات": "Asia/Dubai", "دبي": "Asia/Dubai", "قطر": "Asia/Qatar", "الكويت": "Asia/Kuwait",
+        "تونس": "Africa/Tunis", "الجزائر": "Africa/Algiers", "المغرب": "Africa/Casablanca",
+        "تركيا": "Europe/Istanbul", "بريطانيا": "Europe/London", "فرنسا": "Europe/Paris", "أمريكا": "America/New_York"
+    }
+    for country, zone in timezones.items():
+        if country in query_lower:
+            tz = pytz.timezone(zone)
+            now = datetime.datetime.now(tz)
+            return f"🕒 الوقت الآن في **{country}**: **{now.strftime('%I:%M:%S %p')}**"
+    if "الوقت" in query_lower or "الساعة" in query_lower:
+        tz = pytz.timezone("Africa/Tripoli")
+        now = datetime.datetime.now(tz)
+        return f"🕒 الوقت الحالي: **{now.strftime('%I:%M:%S %p')}**"
+    return None
+
+# --- 4. عرض المحادثات الحالية ---
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
         if "image_url" in msg:
             st.image(msg["image_url"], caption="🎨 تم التصميم بواسطة Moha AI", use_container_width=True)
 
-# --- 6. استقبال وتوليد الطلبات ---
+# --- 5. استقبال وتوليد الطلبات ---
 text_input = st.chat_input("اكتب سؤالك، اطلب تصميم صورة، أو تأليف أغنية...")
 
 prompt_text = ""
@@ -170,16 +173,11 @@ if prompt_text:
                 st.session_state.messages.append({"role": "assistant", "content": answer})
             else:
                 if not api_key:
-                    st.error("⚠️ لم يتم العثور على مفتاح API في Secrets.")
+                    st.error("⚠️ لم يتم إدخال مفتاح API. أدخله في القائمة الجانبية أو في Secrets.")
                 else:
                     with st.spinner("⚡ Moha AI يجيب بسرعة..."):
                         answer = ""
-                        # التنقل التلقائي بين عدة نماذج لتفادي نفاد الكوتا (Quota Exceeded)
-                        models_to_try = [
-                            'gemini-3.6-flash',
-                            'gemini-2.5-flash',
-                            'gemini-2.0-flash'
-                        ]
+                        models_to_try = ['gemini-3.6-flash', 'gemini-2.5-flash', 'gemini-2.0-flash']
                         
                         client = genai.Client(api_key=api_key)
                         system_instruction = (
@@ -210,7 +208,7 @@ if prompt_text:
                                 continue
 
                         if not answer:
-                            answer = "⚠️ نفذت حصة الحساب اليومية أو أن المفتاح يحتاج لتحديد. يرجى تجربة مفتاح API جديد من Google AI Studio."
+                            answer = "⚠️ نفذت حصة هذا المفتاح اليومية. يرجى تجربة مفتاح API جديد من Google AI Studio وضعه في القائمة الجانبية."
 
                     st.markdown(answer)
                     st.session_state.messages.append({"role": "assistant", "content": answer})
