@@ -3,8 +3,7 @@ import datetime
 import pytz
 import urllib.parse
 import streamlit as st
-from google import genai
-from google.genai import types
+import google.generativeai as genai
 
 # --- 1. إعدادات الصفحة والتصميم ---
 st.set_page_config(
@@ -40,12 +39,9 @@ if "messages" not in st.session_state:
 if "saved_chats" not in st.session_state:
     st.session_state.saved_chats = {}
 
-# --- 2. القائمة الجانبية مع خانة المفتاح المرنة ---
+# --- 2. القائمة الجانبية (نظيفة وخالية تماماً من خانة المفتاح) ---
 with st.sidebar:
     st.header("⚙️ خيارات Moha AI")
-    
-    # خانة إدخال المفتاح مباشرة بكل سهولة
-    user_api_key = st.text_input("🔑 مفتاح Gemini API:", type="password", placeholder="أدخل مفتاحك هنا...")
     
     enable_audio_reply = st.toggle("🔊 تفعيل الرد الصوتي", value=False)
     voice_gender = st.selectbox("🗣️ صوت المتحدث:", ("صوت أنثى (طبيعي وسريع)", "صوت رجل (طبيعي وسريع)"))
@@ -154,38 +150,36 @@ if prompt_text:
             else:
                 with st.spinner("⚡ Moha AI يجيب بسرعة..."):
                     answer = ""
-                    # استخدام المفتاح من الشريط الجانبي أولاً، أو الاحتياطي من الـ Secrets
-                    api_key = user_api_key.strip() if user_api_key else st.secrets.get("GEMINI_API_KEY", "")
+                    # جلب المفتاح تلقائياً من إعدادات الـ Secrets بأمان
+                    api_key = st.secrets.get("GEMINI_API_KEY", "")
                     
                     if not api_key:
-                        answer = "⚠️ تنبيه: يرجى إدخال مفتاح Gemini API في القائمة الجانبية (يبدأ بـ AIzaSy)."
+                        answer = "⚠️ تنبيه: يرجى إضافة المفتاح في إعدادات Secrets الخاصة بالتطبيق."
                     else:
                         try:
-                            client = genai.Client(api_key=api_key)
+                            genai.configure(api_key=api_key)
                             system_instruction = (
                                 "You are Moha AI, an exceptionally smart, fast, and helpful AI assistant created and developed by Mohamed Alaa Bin Zayed. "
                                 "When speaking or answering in English, use flawless, modern, natural, and grammatically accurate English. "
                                 "If asked who created, developed, or built you, answer clearly and proudly in any language that your developer and creator is Mohamed Alaa Bin Zayed."
                             )
                             
-                            contents = []
-                            if uploaded_media:
-                                bytes_data = uploaded_media.getvalue()
-                                contents.append(types.Part.from_bytes(data=bytes_data, mime_type=uploaded_media.type))
-                            contents.append(prompt_text)
-                            
-                            models_to_try = ['gemini-3.6-flash', 'gemini-2.5-flash']
+                            models_to_try = ['gemini-1.5-flash', 'gemini-1.5-pro']
                             success = False
                             
                             for m in models_to_try:
                                 try:
-                                    response = client.models.generate_content(
-                                        model=m,
-                                        contents=contents,
-                                        config=types.GenerateContentConfig(
-                                            system_instruction=system_instruction
-                                        )
+                                    model = genai.GenerativeModel(
+                                        model_name=m,
+                                        system_instruction=system_instruction
                                     )
+                                    
+                                    contents = [prompt_text]
+                                    if uploaded_media:
+                                        bytes_data = uploaded_media.getvalue()
+                                        contents.insert(0, {"mime_type": uploaded_media.type, "data": bytes_data})
+                                        
+                                    response = model.generate_content(contents)
                                     if response and response.text:
                                         answer = response.text
                                         success = True
@@ -194,7 +188,7 @@ if prompt_text:
                                     continue
                             
                             if not success:
-                                answer = "⚠️ انتهت حصة الطلبات المجانية لهذا المفتاح أو حدث خطأ، يرجى استخدام مفتاح API جديد يبدأ بـ AIzaSy."
+                                answer = "⚠️ حدث خطأ في الاتصال بالنموذج، تأكد من صحة المفتاح في الـ Secrets."
                                 
                         except Exception as e:
                             answer = f"⚠️ خطأ تقني: {str(e)}"
