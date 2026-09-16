@@ -3,6 +3,7 @@ import requests
 import datetime
 import pytz
 import base64
+import urllib.parse
 import streamlit as st
 
 # --- 1. إعدادات الصفحة والتصميم ---
@@ -81,7 +82,7 @@ def get_global_time(query):
         return f"🕒 الوقت الحالي: **{now.strftime('%I:%M:%S %p')}**"
     return None
 
-# --- 4. القائمة الجانبية (حفظ المحادثات والخيارات) ---
+# --- 4. القائمة الجانبية ---
 with st.sidebar:
     st.header("⚙️ خيارات Moha AI")
     enable_audio_reply = st.toggle("🔊 تفعيل الرد الصوتي", value=False)
@@ -89,14 +90,14 @@ with st.sidebar:
     
     st.write("---")
     st.header("💾 حفظ المحادثة")
-    chat_title_input = st.text_input("اسم المحادثة:", placeholder="مثال: محادثة الراب / أفكار صور")
+    chat_title_input = st.text_input("اسم المحادثة:", placeholder="مثال: محادثة الصور / الراب")
     if st.button("💾 حفظ المحادثة الحالية"):
         if st.session_state.messages:
             title = chat_title_input.strip() if chat_title_input.strip() else f"محادثة {datetime.datetime.now().strftime('%H:%M - %d/%m')}"
             st.session_state.saved_chats[title] = list(st.session_state.messages)
             st.success(f"تم حفظ: {title}")
         else:
-            st.warning("المحادثة فارغة لحفظها!")
+            st.warning("المحادثة فارغة!")
 
     st.write("---")
     st.header("📂 محادثاتي المحفوظة")
@@ -112,7 +113,7 @@ with st.sidebar:
                 del st.session_state.saved_chats[selected_chat]
                 st.rerun()
     else:
-        st.info("لا توجد محادثات محفوظة بعد.")
+        st.info("لا توجد محادثات محفوظة.")
 
     st.write("---")
     uploaded_media = st.file_uploader("🖼️ / 🎥 ارفع صورة أو فيديو للتحليل", type=["png", "jpg", "jpeg", "mp4"])
@@ -125,9 +126,11 @@ with st.sidebar:
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
+        if "image_url" in msg:
+            st.image(msg["image_url"], caption="🎨 تم التصميم بواسطة Moha AI", use_container_width=True)
 
-# --- 6. استقبال وتوليد الطلبات ---
-text_input = st.chat_input("اكتب سؤالك، اطلب أغنية، صمم صورة، أو تحدث بالإنجليزية...")
+# --- 6. استقبال وتوليد الطلبات والصور ---
+text_input = st.chat_input("اكتب سؤالك، اطلب تصميم صورة، أو تأليف أغنية...")
 
 prompt_text = ""
 file_part = None
@@ -141,71 +144,85 @@ if uploaded_media and not text_input:
     file_part = {"inline_data": {"mime_type": uploaded_media.type, "data": file_b64}}
 
 if prompt_text:
-    if not api_key:
-        st.error("لم يتم العثور على مفتاح API في إعدادات Secrets.")
-    else:
-        st.session_state.messages.append({"role": "user", "content": prompt_text})
-        
-        with st.chat_message("user"):
-            st.markdown(prompt_text)
+    st.session_state.messages.append({"role": "user", "content": prompt_text})
+    with st.chat_message("user"):
+        st.markdown(prompt_text)
 
-        time_res = get_global_time(prompt_text)
+    is_image_request = any(w in prompt_text.lower() for w in ["صورة", "صمم", "رسم", "ارسم", "انشئ صورة", "image", "draw", "generate image", "picture"])
 
-        with st.chat_message("assistant"):
+    with st.chat_message("assistant"):
+        if is_image_request and not file_part:
+            with st.spinner("🎨 Moha AI يقوم بتصميم الصورة..."):
+                prompt_encoded = urllib.parse.quote(f"futuristic purple and white logo emblem for Moha AI, high tech glowing neon purple, pure white background, 3d render 8k, minimalist aesthetic, {prompt_text}")
+                generated_img_url = f"https://image.pollinations.ai/prompt/{prompt_encoded}?width=800&height=800&nologo=true"
+                
+                answer = "تفضل يا موحي! هذه هي الصورة المصممة لك:"
+                st.markdown(answer)
+                st.image(generated_img_url, caption="🔮 تصميم Moha AI", use_container_width=True)
+                
+                st.session_state.messages.append({
+                    "role": "assistant", 
+                    "content": answer, 
+                    "image_url": generated_img_url
+                })
+        else:
+            time_res = get_global_time(prompt_text)
             if time_res and not file_part:
                 answer = time_res
                 st.markdown(answer)
                 st.session_state.messages.append({"role": "assistant", "content": answer})
             else:
-                with st.spinner("⚡ Moha AI يجيب بسرعة..."):
-                    try:
-                        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key={api_key}"
-                        
-                        parts = [{"text": prompt_text}]
-                        if file_part:
-                            parts.append(file_part)
+                if not api_key:
+                    st.error("لم يتم العثور على مفتاح API في Secrets.")
+                else:
+                    with st.spinner("⚡ Moha AI يجيب بسرعة..."):
+                        try:
+                            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key={api_key}"
+                            parts = [{"text": prompt_text}]
+                            if file_part:
+                                parts.append(file_part)
 
-                        system_instruction_text = (
-                            "You are Moha AI, an exceptionally smart, fast, and helpful AI assistant created and developed by Mohamed Alaa Bin Zayed. "
-                            "When speaking or answering in English, use flawless, modern, natural, and grammatically accurate English. "
-                            "If asked to write songs or rap lyrics, create highly creative lyrics. "
-                            "If asked to generate or design images, provide rich, highly detailed prompts in both English and Arabic. "
-                            "If asked who created, developed, or built you, answer clearly and proudly in any language that your developer and creator is Mohamed Alaa Bin Zayed."
-                        )
+                            system_instruction_text = (
+                                "You are Moha AI, an exceptionally smart, fast, and helpful AI assistant created and developed by Mohamed Alaa Bin Zayed. "
+                                "When speaking or answering in English, use flawless, modern, natural, and grammatically accurate English. "
+                                "If asked who created, developed, or built you, answer clearly and proudly in any language that your developer and creator is Mohamed Alaa Bin Zayed."
+                            )
 
-                        payload = {
-                            "systemInstruction": {
-                                "parts": [{"text": system_instruction_text}]
-                            },
-                            "contents": [{"parts": parts}]
-                        }
-                        
-                        response = requests.post(url, json=payload, timeout=6)
-                        res_json = response.json()
+                            payload = {
+                                "systemInstruction": {"parts": [{"text": system_instruction_text}]},
+                                "contents": [{"parts": parts}]
+                            }
+                            
+                            # زيادة المهلة إلى 15 ثانية لتجنب انقطاع الخدمة
+                            response = requests.post(url, json=payload, timeout=15)
+                            res_json = response.json()
 
-                        if "candidates" in res_json:
-                            answer = res_json["candidates"][0]["content"]["parts"][0]["text"]
-                        else:
-                            answer = "حدث خطأ بسيط، يرجى إعادة المحاولة."
+                            if "candidates" in res_json and len(res_json["candidates"]) > 0:
+                                answer = res_json["candidates"][0]["content"]["parts"][0]["text"]
+                            elif "error" in res_json:
+                                answer = f"تنبيه: {res_json['error'].get('message', 'حدث خطأ في الخدمة')}"
+                            else:
+                                answer = "أنا جاهز، تفضل بإعادة كتابة سؤالك."
 
-                    except Exception as e:
-                        answer = "حدث خطأ في الاتصال، حاول مرة أخرى."
+                        except requests.exceptions.Timeout:
+                            answer = "استغرقت الاستجابة وقتاً أطول من المعتاد، يرجى المحاولة مرة أخرى."
+                        except Exception:
+                            answer = "حدث انقطاع بسيط في الاتصال، أعد محاولتك وسأجيبك فوراً."
 
-                st.markdown(answer)
-                st.session_state.messages.append({"role": "assistant", "content": answer})
+                    st.markdown(answer)
+                    st.session_state.messages.append({"role": "assistant", "content": answer})
 
-                if enable_audio_reply and answer:
-                    pitch_val = "0.85" if "رجل" in voice_gender else "1.05"
-                    clean_text = answer.replace("'", "").replace("\n", " ").replace("*", "").replace('"', '')
-                    
-                    tts_script = f"""
-                    <script>
-                    window.speechSynthesis.cancel();
-                    var msg = new SpeechSynthesisUtterance("{clean_text}");
-                    msg.lang = 'ar-SA';
-                    msg.rate = 1.25;
-                    msg.pitch = {pitch_val};
-                    window.speechSynthesis.speak(msg);
-                    </script>
-                    """
-                    st.components.v1.html(tts_script, height=0)
+                    if enable_audio_reply and answer:
+                        pitch_val = "0.85" if "رجل" in voice_gender else "1.05"
+                        clean_text = answer.replace("'", "").replace("\n", " ").replace("*", "").replace('"', '')
+                        tts_script = f"""
+                        <script>
+                        window.speechSynthesis.cancel();
+                        var msg = new SpeechSynthesisUtterance("{clean_text}");
+                        msg.lang = 'ar-SA';
+                        msg.rate = 1.25;
+                        msg.pitch = {pitch_val};
+                        window.speechSynthesis.speak(msg);
+                        </script>
+                        """
+                        st.components.v1.html(tts_script, height=0)
