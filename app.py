@@ -49,7 +49,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.markdown('<div class="designer-card">🔮 Moha AI | صانعي وبكل فخر محمد علاء بن زايد 🔮</div>', unsafe_allow_html=True)
-st.caption("إجابات فائقة السرعة، كتابة أغاني، تصميم صور، وقراءة صوتية تلقائية.")
+st.caption("إجابات فائقة السرعة، كتابة أغاني، تصميم صور، وقراءة صوتية عند الطلب.")
 
 # --- 2. إدارة مفتاح API والسجل ---
 raw_key = st.secrets.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY", "")
@@ -83,7 +83,8 @@ def get_global_time(query):
 # --- 4. القائمة الجانبية ---
 with st.sidebar:
     st.header("⚙️ خيارات Moha AI")
-    enable_audio_reply = st.toggle("🔊 تفعيل الرد الصوتي", value=True)
+    # تم إلغاء تفعيل الرد الصوتي تلقائياً هنا (value=False)
+    enable_audio_reply = st.toggle("🔊 تفعيل الرد الصوتي", value=False)
     
     voice_gender = st.selectbox("🗣️ صوت المتحدث:", ("صوت أنثى (طبيعي وسريع)", "صوت رجل (طبيعي وسريع)"))
     
@@ -163,7 +164,7 @@ if prompt_text:
                 st.markdown(answer)
                 st.session_state.messages.append({"role": "assistant", "content": answer})
 
-                # رد صوتي أسرع (rate 1.25) وبدون مشاكل
+                # تشغيل الصوت فقط إذا قام المستخدم بتفعيله يدويًا
                 if enable_audio_reply and answer:
                     pitch_val = "0.85" if "رجل" in voice_gender else "1.05"
                     clean_text = answer.replace("'", "").replace("\n", " ").replace("*", "").replace('"', '')
