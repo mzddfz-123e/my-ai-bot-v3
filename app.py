@@ -5,10 +5,10 @@ import urllib.request
 import json
 import streamlit as st
 
-# --- 1. إعدادات الصفحة والتصميم ---
+# --- 1. إعدادات الصفحة والستايل (أبيض وسماوي راقي) ---
 st.set_page_config(
     page_title="Moha AI | محمد علاء بن زايد",
-    page_icon="🔮",
+    page_icon="🌊",
     layout="centered"
 )
 
@@ -16,22 +16,36 @@ st.markdown("""
     <style>
     .main { direction: rtl; text-align: right; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
     stChatMessage { direction: rtl; text-align: right; }
-    .stApp { background-color: #fcfaff; color: #2d004d; }
+    .stApp { background-color: #f4f9fc; color: #03045e; }
+    
     .designer-card {
-        background: linear-gradient(135deg, #7b2cbf 0%, #9d4edd 100%);
-        color: #ffffff; padding: 18px; border-radius: 20px;
-        text-align: center; font-size: 23px; font-weight: bold;
-        box-shadow: 0 8px 20px rgba(123, 44, 191, 0.2); margin-bottom: 20px;
+        background: linear-gradient(135deg, #0077b6 0%, #00b4d8 50%, #90e0ef 100%);
+        color: #ffffff; padding: 20px; border-radius: 20px;
+        text-align: center; font-size: 24px; font-weight: bold;
+        box-shadow: 0 8px 20px rgba(0, 119, 182, 0.2); margin-bottom: 25px;
     }
+    
     .stButton>button {
         width: 100%; border-radius: 12px;
-        background: linear-gradient(90deg, #7b2cbf, #5a189a);
-        color: white; font-size: 15px; font-weight: bold; border: none; padding: 8px;
+        background: linear-gradient(90deg, #0077b6, #00b4d8);
+        color: white; font-size: 15px; font-weight: bold; border: none; padding: 10px;
+        transition: 0.3s ease;
+    }
+    .stButton>button:hover {
+        background: linear-gradient(90deg, #03045e, #0077b6);
+    }
+    
+    /* تخصيص صندوق إدخال النص */
+    .stChatInput input {
+        background-color: #ffffff !important;
+        color: #03045e !important;
+        border: 2px solid #90e0ef !important;
+        border-radius: 12px !important;
     }
     </style>
 """, unsafe_allow_html=True)
 
-st.markdown('<div class="designer-card">🔮 Moha AI (النسخة الخارقة) | صانعي محمد علاء بن زايد 🔮</div>', unsafe_allow_html=True)
+st.markdown('<div class="designer-card">🌊 Moha AI (النسخة السماوية الفاخرة) | صانعي وبكل فخر محمد علاء بن زايد 🌊</div>', unsafe_allow_html=True)
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -39,16 +53,16 @@ if "messages" not in st.session_state:
 if "saved_chats" not in st.session_state:
     st.session_state.saved_chats = {}
 
-# --- 2. القائمة الجانبية ---
+# --- 2. القائمة الجانبية (Sidebar) ---
 with st.sidebar:
-    st.header("⚙️ خيارات Moha AI")
+    st.header("⚙️ خيارات التطبيق")
     
     enable_audio_reply = st.toggle("🔊 تفعيل الرد الصوتي", value=False)
     voice_gender = st.selectbox("🗣️ صوت المتحدث:", ("صوت أنثى (طبيعي وسريع)", "صوت رجل (طبيعي وسريع)"))
     
     st.write("---")
     st.header("💾 حفظ المحادثة")
-    chat_title_input = st.text_input("اسم المحادثة:", placeholder="مثال: محادثة الترجمة / الأكواد")
+    chat_title_input = st.text_input("اسم المحادثة:", placeholder="مثال: أسئلة برمجة / أفكار")
     if st.button("💾 حفظ المحادثة الحالية"):
         if st.session_state.messages:
             title = chat_title_input.strip() if chat_title_input.strip() else f"محادثة {datetime.datetime.now().strftime('%H:%M - %d/%m')}"
@@ -76,7 +90,7 @@ with st.sidebar:
     st.write("---")
     uploaded_media = st.file_uploader("🖼️ / 🎥 ارفع صورة أو فيديو للتحليل", type=["png", "jpg", "jpeg", "mp4"])
     
-    if st.button("🗑️ بدء محادثة جديدة"):
+    if st.button("🗑️ محادثة جديدة"):
         st.session_state.messages = []
         st.rerun()
 
@@ -99,7 +113,7 @@ def get_global_time(query):
     if "الوقت" in query_lower or "الساعة" in query_lower:
         tz = pytz.timezone("Africa/Tripoli")
         now = datetime.datetime.now(tz)
-        return f"🕒 الوقت الحالي: **{now.strftime('%I:%M:%S %p')}**"
+        return f"🕒 الوقت الحالي في طرابلس: **{now.strftime('%I:%M:%S %p')}**"
     return None
 
 # --- 4. عرض المحادثات الحالية ---
@@ -107,10 +121,10 @@ for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
         if "image_url" in msg:
-            st.image(msg["image_url"], caption="🎨 تم التصميم بواسطة Moha AI", use_container_width=True)
+            st.image(msg["image_url"], caption="🌊 تم التصميم بواسطة Moha AI", use_container_width=True)
 
 # --- 5. استقبال وتوليد الطلبات ---
-text_input = st.chat_input("اكتب سؤالك (مثل: ترجم كلمات، اشرح درس، أو صمم صورة)...")
+text_input = st.chat_input("اكتب سؤالك، اطلب تصميم صورة، أو استفسر عن أي شيء...")
 
 prompt_text = ""
 if text_input:
@@ -128,13 +142,13 @@ if prompt_text:
 
     with st.chat_message("assistant"):
         if is_image_request and not uploaded_media:
-            with st.spinner("🎨 Moha AI يقوم بتصميم الصورة..."):
-                prompt_encoded = urllib.parse.quote(f"futuristic purple and white logo emblem for Moha AI, high tech glowing neon purple, pure white background, 3d render 8k, minimalist aesthetic, {prompt_text}")
+            with st.spinner("🌊 Moha AI يقوم بتصميم الصورة باللون السماوي الفاخر..."):
+                prompt_encoded = urllib.parse.quote(f"futuristic cyan and white glowing logo emblem for Moha AI, clean bright white background, 3d render 8k, minimalist aesthetic, {prompt_text}")
                 generated_img_url = f"https://image.pollinations.ai/prompt/{prompt_encoded}?width=800&height=800&nologo=true"
                 
                 answer = "تفضل يا موحي! هذه هي الصورة المصممة لك:"
                 st.markdown(answer)
-                st.image(generated_img_url, caption="🔮 تصميم Moha AI", use_container_width=True)
+                st.image(generated_img_url, caption="🌊 تصميم Moha AI", use_container_width=True)
                 
                 st.session_state.messages.append({
                     "role": "assistant", 
@@ -148,26 +162,24 @@ if prompt_text:
                 st.markdown(answer)
                 st.session_state.messages.append({"role": "assistant", "content": answer})
             else:
-                with st.spinner("⚡ Moha AI يبحث ويفكر..."):
+                with st.spinner("⚡ Moha AI يحلل ويصيغ الإجابة..."):
                     answer = ""
                     try:
-                        # استخدام محرك ذكاء اصطناعي متطور ومفتوح للاستجابة لكل الأسئلة المتنوعة
-                        api_prompt = f"Answer accurately in Arabic as Moha AI, a smart assistant created by Mohamed Alaa Bin Zayed. User asks: {prompt_text}"
+                        api_prompt = f"Answer clearly and intelligently in Arabic as Moha AI, an assistant created by Mohamed Alaa Bin Zayed. User asks: {prompt_text}"
                         api_url = f"https://text.pollinations.ai/{urllib.parse.quote(api_prompt)}"
                         
                         req = urllib.request.Request(api_url, headers={'User-Agent': 'Mozilla/5.0'})
-                        with urllib.request.urlopen(req, timeout=20) as response:
+                        with urllib.request.urlopen(req, timeout=15) as response:
                             answer = response.read().decode('utf-8')
-                    except Exception as e:
+                    except Exception:
                         answer = ""
 
                     if not answer or "error" in answer.lower():
-                        # احتياطي ذكي يترجم أو يجيب حسب الكلمة
                         q = prompt_text.lower()
                         if "خروف" in q:
-                            answer = "كلمة خروف بالإنجليزية تُعرف بـ **Sheep** (للكبير) أو **Lamb** (للصغير/اللحم)."
+                            answer = "كلمة خروف بالإنجليزية تُعرف بـ **Sheep** (للبالغ) أو **Lamb** (للصغير)."
                         else:
-                            answer = f"أهلاً يا موحي! بخصوص سؤالك ('{prompt_text}'): أنا معك وجاهز لتنفيذه بكل دقة واحترافية من خلال تطبيقك الرائع."
+                            answer = f"أهلاً بك يا موحي! بخصوص طلبك ('{prompt_text}'): أنا مساعدك الذكي Moha AI من تطوير العبقري **محمد علاء بن زايد**، وجاهز لتنفيذه فوراً وبكل احترافية!"
 
                 st.markdown(answer)
                 st.session_state.messages.append({"role": "assistant", "content": answer})
