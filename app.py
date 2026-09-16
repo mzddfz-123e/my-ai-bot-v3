@@ -1,7 +1,6 @@
 import os
 import datetime
 import pytz
-import base64
 import urllib.parse
 import streamlit as st
 from google import genai
@@ -18,33 +17,17 @@ st.markdown("""
     <style>
     .main { direction: rtl; text-align: right; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
     stChatMessage { direction: rtl; text-align: right; }
-    
-    .stApp {
-        background-color: #fcfaff;
-        color: #2d004d;
-    }
-    
+    .stApp { background-color: #fcfaff; color: #2d004d; }
     .designer-card {
         background: linear-gradient(135deg, #7b2cbf 0%, #9d4edd 100%);
-        color: #ffffff;
-        padding: 18px;
-        border-radius: 20px;
-        text-align: center;
-        font-size: 23px;
-        font-weight: bold;
-        box-shadow: 0 8px 20px rgba(123, 44, 191, 0.2);
-        margin-bottom: 20px;
+        color: #ffffff; padding: 18px; border-radius: 20px;
+        text-align: center; font-size: 23px; font-weight: bold;
+        box-shadow: 0 8px 20px rgba(123, 44, 191, 0.2); margin-bottom: 20px;
     }
-    
     .stButton>button {
-        width: 100%;
-        border-radius: 12px;
+        width: 100%; border-radius: 12px;
         background: linear-gradient(90deg, #7b2cbf, #5a189a);
-        color: white;
-        font-size: 15px;
-        font-weight: bold;
-        border: none;
-        padding: 8px;
+        color: white; font-size: 15px; font-weight: bold; border: none; padding: 8px;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -60,11 +43,8 @@ if "saved_chats" not in st.session_state:
 # --- 2. القائمة الجانبية وجلب المفتاح ---
 with st.sidebar:
     st.header("⚙️ خيارات Moha AI")
-    
-    # اختيار مصدر المفتاح
     default_key = st.secrets.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY", "")
-    custom_key = st.text_input("🔑 مفتاح Gemini API (اختياري):", type="password", help="ضع مفتاح جديد هنا إذا انتهت حصة المفتاح الرئيسي")
-    
+    custom_key = st.text_input("🔑 مفتاح Gemini API (اختياري):", type="password")
     api_key = custom_key.strip() if custom_key.strip() else str(default_key).strip().replace('"', '').replace("'", "")
     
     enable_audio_reply = st.toggle("🔊 تفعيل الرد الصوتي", value=False)
@@ -177,7 +157,8 @@ if prompt_text:
                 else:
                     with st.spinner("⚡ Moha AI يجيب بسرعة..."):
                         answer = ""
-                        models_to_try = ['gemini-3.6-flash', 'gemini-2.5-flash', 'gemini-2.0-flash']
+                        # استخدام النموذج الأكثر استقراراً وقوة في الحصة المجانية
+                        models_to_try = ['gemini-1.5-flash', 'gemini-1.5-pro']
                         
                         client = genai.Client(api_key=api_key)
                         system_instruction = (
@@ -204,11 +185,11 @@ if prompt_text:
                                 if response and response.text:
                                     answer = response.text
                                     break
-                            except Exception:
+                            except Exception as e:
                                 continue
 
                         if not answer:
-                            answer = "⚠️ نفذت حصة هذا المفتاح اليومية. يرجى تجربة مفتاح API جديد من Google AI Studio وضعه في القائمة الجانبية."
+                            answer = "⚠️ حدث خطأ في الاتصال بالنموذج. تأكد من صحة مفتاح API."
 
                     st.markdown(answer)
                     st.session_state.messages.append({"role": "assistant", "content": answer})
