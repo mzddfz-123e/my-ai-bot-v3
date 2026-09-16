@@ -6,7 +6,7 @@ import base64
 import urllib.parse
 import streamlit as st
 
-# --- 1. إعدادات الصفحة والتصميم (بنفسجي وأبيض) ---
+# --- 1. إعدادات الصفحة والتصميم ---
 st.set_page_config(
     page_title="Moha AI | محمد علاء بن زايد",
     page_icon="🔮",
@@ -82,7 +82,7 @@ def get_global_time(query):
         return f"🕒 الوقت الحالي: **{now.strftime('%I:%M:%S %p')}**"
     return None
 
-# --- 4. القائمة الجانبية (حفظ المحادثات والخيارات) ---
+# --- 4. القائمة الجانبية ---
 with st.sidebar:
     st.header("⚙️ خيارات Moha AI")
     enable_audio_reply = st.toggle("🔊 تفعيل الرد الصوتي", value=False)
@@ -176,38 +176,39 @@ if prompt_text:
                     st.error("لم يتم العثور على مفتاح API في Secrets.")
                 else:
                     with st.spinner("⚡ Moha AI يجيب بسرعة..."):
-                        try:
-                            # استخدام النموذج الحديث والمستقر gemini-3.6-flash
-                            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key={api_key}"
-                            parts = [{"text": prompt_text}]
-                            if file_part:
-                                parts.append(file_part)
+                        answer = ""
+                        # القائمة بالنماذج المتاحة للربط التلقائي في حال توقف أحدها
+                        models_to_try = ["gemini-3.6-flash", "gemini-1.5-flash"]
+                        
+                        system_instruction_text = (
+                            "You are Moha AI, an exceptionally smart, fast, and helpful AI assistant created and developed by Mohamed Alaa Bin Zayed. "
+                            "When speaking or answering in English, use flawless, modern, natural, and grammatically accurate English. "
+                            "If asked who created, developed, or built you, answer clearly and proudly in any language that your developer and creator is Mohamed Alaa Bin Zayed."
+                        )
 
-                            system_instruction_text = (
-                                "You are Moha AI, an exceptionally smart, fast, and helpful AI assistant created and developed by Mohamed Alaa Bin Zayed. "
-                                "When speaking or answering in English, use flawless, modern, natural, and grammatically accurate English. "
-                                "If asked who created, developed, or built you, answer clearly and proudly in any language that your developer and creator is Mohamed Alaa Bin Zayed."
-                            )
+                        parts = [{"text": prompt_text}]
+                        if file_part:
+                            parts.append(file_part)
 
-                            payload = {
-                                "systemInstruction": {"parts": [{"text": system_instruction_text}]},
-                                "contents": [{"parts": parts}]
-                            }
-                            
-                            response = requests.post(url, json=payload, timeout=15)
-                            res_json = response.json()
+                        payload = {
+                            "systemInstruction": {"parts": [{"text": system_instruction_text}]},
+                            "contents": [{"parts": parts}]
+                        }
 
-                            if "candidates" in res_json and len(res_json["candidates"]) > 0:
-                                answer = res_json["candidates"][0]["content"]["parts"][0]["text"]
-                            elif "error" in res_json:
-                                answer = f"تنبيه: {res_json['error'].get('message', 'حدث خطأ في الخدمة')}"
-                            else:
-                                answer = "أنا جاهز، تفضل بإعادة كتابة سؤالك."
+                        for model_name in models_to_try:
+                            try:
+                                url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={api_key}"
+                                response = requests.post(url, json=payload, timeout=12)
+                                res_json = response.json()
 
-                        except requests.exceptions.Timeout:
-                            answer = "استغرقت الاستجابة وقتاً أطول من المعتاد، يرجى المحاولة مرة أخرى."
-                        except Exception:
-                            answer = "حدث انقطاع بسيط في الاتصال، أعد محاولتك وسأجيبك فوراً."
+                                if "candidates" in res_json and len(res_json["candidates"]) > 0:
+                                    answer = res_json["candidates"][0]["content"]["parts"][0]["text"]
+                                    break
+                            except Exception:
+                                continue
+
+                        if not answer:
+                            answer = "حدث أخطاء متكررة في الاتصال بالخدمة. يُرجى التحقق من مفتاح الـ API في Secrets أو إعادة المحاولة."
 
                     st.markdown(answer)
                     st.session_state.messages.append({"role": "assistant", "content": answer})
