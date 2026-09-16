@@ -40,11 +40,10 @@ if "messages" not in st.session_state:
 if "saved_chats" not in st.session_state:
     st.session_state.saved_chats = {}
 
-# --- 2. القائمة الجانبية وجلب المفتاح بدقة ---
+# --- 2. القائمة الجانبية وجلب المفتاح ---
 with st.sidebar:
     st.header("⚙️ خيارات Moha AI")
     
-    # جلب المفتاح من الـ Secrets أو من خانة الإدخال اليدوية
     secret_key = ""
     try:
         secret_key = st.secrets.get("GEMINI_API_KEY", "")
@@ -54,7 +53,7 @@ with st.sidebar:
     custom_key = st.text_input("🔑 مفتاح Gemini API:", type="password", value=secret_key)
     api_key = custom_key.strip().replace('"', '').replace("'", "")
     
-    enable_audio_reply = st.toggle("🔊 تفعيل الرد الصوتى", value=False)
+    enable_audio_reply = st.toggle("🔊 تفعيل الرد الصوتي", value=False)
     voice_gender = st.selectbox("🗣️ صوت المتحدث:", ("صوت أنثى (طبيعي وسريع)", "صوت رجل (طبيعي وسريع)"))
     
     st.write("---")
@@ -164,8 +163,6 @@ if prompt_text:
                 else:
                     with st.spinner("⚡ Moha AI يجيب بسرعة..."):
                         answer = ""
-                        models_to_try = ['gemini-1.5-flash', 'gemini-1.5-pro']
-                        
                         try:
                             client = genai.Client(api_key=api_key)
                             system_instruction = (
@@ -180,24 +177,20 @@ if prompt_text:
                                 contents.append(types.Part.from_bytes(data=bytes_data, mime_type=uploaded_media.type))
                             contents.append(prompt_text)
                             
-                            for target_model in models_to_try:
-                                try:
-                                    response = client.models.generate_content(
-                                        model=target_model,
-                                        contents=contents,
-                                        config=types.GenerateContentConfig(
-                                            system_instruction=system_instruction
-                                        )
-                                    )
-                                    if response and response.text:
-                                        answer = response.text
-                                        break
-                                except Exception as model_err:
-                                    # احتفظ بالخطأ الحقيقي لنعرف سببه لو حدث مجدداً
-                                    answer = f"⚠️ تفاصيل الخطأ التقني: {str(model_err)}"
-                                    continue
-                        except Exception as client_err:
-                            answer = f"⚠️ خطأ في تهيئة العميل: {str(client_err)}"
+                            # استخدام النموذج القياسي المدعوم رسمياً
+                            response = client.models.generate_content(
+                                model='gemini-2.5-flash',
+                                contents=contents,
+                                config=types.GenerateContentConfig(
+                                    system_instruction=system_instruction
+                                )
+                            )
+                            if response and response.text:
+                                answer = response.text
+                            else:
+                                answer = "⚠️ لم يتم استلام رد من النموذج."
+                        except Exception as e:
+                            answer = f"⚠️ الخطأ التقني: {str(e)}"
 
                     st.markdown(answer)
                     st.session_state.messages.append({"role": "assistant", "content": answer})
