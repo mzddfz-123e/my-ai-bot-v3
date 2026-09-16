@@ -50,9 +50,9 @@ st.markdown("""
 
 st.markdown('<div class="designer-card">🔮 Moha AI | صانعي وبكل فخر محمد علاء بن زايد 🔮</div>', unsafe_allow_html=True)
 
-# --- 2. إدارة السجل والمحفوظات ومفتاح API ---
+# --- 2. جلب وتنظيف مفتاح API ---
 raw_key = st.secrets.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY", "")
-api_key = str(raw_key).strip()
+api_key = str(raw_key).strip().replace('"', '').replace("'", "")
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -129,7 +129,7 @@ for msg in st.session_state.messages:
         if "image_url" in msg:
             st.image(msg["image_url"], caption="🎨 تم التصميم بواسطة Moha AI", use_container_width=True)
 
-# --- 6. استقبال وتوليد الطلبات والصور ---
+# --- 6. استقبال وتوليد الطلبات ---
 text_input = st.chat_input("اكتب سؤالك، اطلب تصميم صورة، أو تأليف أغنية...")
 
 prompt_text = ""
@@ -173,12 +173,12 @@ if prompt_text:
                 st.session_state.messages.append({"role": "assistant", "content": answer})
             else:
                 if not api_key:
-                    st.error("لم يتم العثور على مفتاح API في Secrets.")
+                    st.error("⚠️ لم يتم العثور على مفتاح API في Secrets. يرجى إضافته باسم GEMINI_API_KEY.")
                 else:
                     with st.spinner("⚡ Moha AI يجيب بسرعة..."):
                         answer = ""
-                        # القائمة بالنماذج المتاحة للربط التلقائي في حال توقف أحدها
-                        models_to_try = ["gemini-3.6-flash", "gemini-1.5-flash"]
+                        # استخدام أسماء النماذج المعتمدة والرسمية
+                        models_to_try = ["gemini-2.5-flash", "gemini-2.0-flash"]
                         
                         system_instruction_text = (
                             "You are Moha AI, an exceptionally smart, fast, and helpful AI assistant created and developed by Mohamed Alaa Bin Zayed. "
@@ -204,11 +204,16 @@ if prompt_text:
                                 if "candidates" in res_json and len(res_json["candidates"]) > 0:
                                     answer = res_json["candidates"][0]["content"]["parts"][0]["text"]
                                     break
+                                elif "error" in res_json:
+                                    err_msg = res_json["error"].get("message", "")
+                                    if "API key not valid" in err_msg:
+                                        answer = "⚠️ مفتاح الـ API غير صحيح. انسخ مفتاح جديد من Google AI Studio وضعه في Secrets."
+                                        break
                             except Exception:
                                 continue
 
                         if not answer:
-                            answer = "حدث أخطاء متكررة في الاتصال بالخدمة. يُرجى التحقق من مفتاح الـ API في Secrets أو إعادة المحاولة."
+                            answer = "حدث خطأ في الاتصال بالسيرفر، تأكد من تجديد مفتاح الـ API وإعادة المحاولة."
 
                     st.markdown(answer)
                     st.session_state.messages.append({"role": "assistant", "content": answer})
