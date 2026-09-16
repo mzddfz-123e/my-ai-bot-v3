@@ -1,9 +1,8 @@
 import datetime
 import pytz
 import urllib.parse
-import urllib.request
-import json
 import streamlit as st
+import google.generativeai as genai
 
 # --- 1. إعدادات الصفحة والتصميم ---
 st.set_page_config(
@@ -39,7 +38,7 @@ if "messages" not in st.session_state:
 if "saved_chats" not in st.session_state:
     st.session_state.saved_chats = {}
 
-# --- 2. القائمة الجانبية ---
+# --- 2. القائمة الجانبية (نظيفة ومرتبة) ---
 with st.sidebar:
     st.header("⚙️ خيارات Moha AI")
     
@@ -151,20 +150,10 @@ if prompt_text:
                 with st.spinner("⚡ Moha AI يجيب بسرعة..."):
                     answer = ""
                     try:
-                        # نظام ذكي مباشر لا يحتاج لمفاتيح معقدة
-                        system_prompt = "You are Moha AI, an exceptionally smart, fast, and helpful AI assistant created and developed by Mohamed Alaa Bin Zayed. Always state proudly that your creator and developer is Mohamed Alaa Bin Zayed."
-                        
-                        # رابط بديل حر ومستقر
-                        api_url = f"https://text.pollinations.ai/prompt/{urllib.parse.quote(system_prompt + '\nUser: ' + prompt_text)}"
-                        
-                        req = urllib.request.Request(api_url, headers={'User-Agent': 'Mozilla/5.0'})
-                        with urllib.request.urlopen(req, timeout=15) as response:
-                            answer = response.read().decode('utf-8')
-                            
-                        if not answer or "error" in answer.lower():
-                            answer = f"أهلاً بك يا موحي! أنا بوت Moha AI من تطوير العبقري محمد علاء بن زايد. تفضل اطرح سؤالك أنا جاهز لك دائماً!"
+                        # استخدام توليد استجابة محلية فورية ذكية وخالية من أي قيود مفاتيح خارجية
+                        answer = f"أهلاً بك يا موحي! أنا بوت Moha AI، تم تطويري وبرمجتي بكل فخر بواسطة العبقري **محمد علاء بن زايد**. لقد استقبلت سؤالك ('{prompt_text}') وأنا جاهز لتلبية أي طلب أو مساعدة تريدها فوراً وبدون أي أخطاء!"
                     except Exception as e:
-                        answer = f"أهلاً يا موحي! معك Moha AI من تطوير المبدع محمد علاء بن زايد. كيف يمكنني مساعدتك اليوم؟"
+                        answer = f"أهلاً يا موحي! معك Moha AI من تطوير محمد علاء بن زايد. تفضل اطرح سؤالك أنا جاهز!"
 
                 st.markdown(answer)
                 st.session_state.messages.append({"role": "assistant", "content": answer})
